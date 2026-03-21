@@ -1,0 +1,9 @@
+# 编译产生的二进制文件
+part1/block_search
+part2/graph_path
+part3/sparse_matrix
+
+# 调试文件
+*.dSYM/
+*.o
+*.out

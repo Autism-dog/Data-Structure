@@ -3,6 +3,9 @@ part1/block_search
 part2/graph_path
 part3/sparse_matrix
 
+# Worktree 目录
+.worktrees/
+
 # 调试文件
 *.dSYM/
 *.o

@@ -436,7 +436,7 @@ const APP = {
   currentAlgo: 'naive',
   currentIndex: 0,
   playTimer: null,
-  speed: 1100
+  speed: 1100  /* default playback interval in milliseconds (medium speed) */
 };
 
 // ============================================================

@@ -20,6 +20,49 @@
   </div>
 </header>
 
+<!-- ===== 1b. DATA SOURCE ===== -->
+<section id="data-source">
+  <div class="source-inner">
+    <h3 class="section-title">数据来源</h3>
+    <div class="source-options">
+      <label class="source-option">
+        <input type="radio" name="data-source" value="default" checked>
+        [1] 默认数据（25元素标准示例，查找键46）
+      </label>
+      <label class="source-option">
+        <input type="radio" name="data-source" value="manual">
+        [2] 手动输入数据
+      </label>
+      <label class="source-option">
+        <input type="radio" name="data-source" value="random">
+        [3] 随机生成数据（元素数量最多75个，块大小可配置）
+      </label>
+    </div>
+
+    <div id="manual-input-panel" class="source-panel hidden">
+      <div class="manual-params-row">
+        <label>每块大小（2-10）：<input type="number" id="manual-block-size" min="2" max="10" value="5"></label>
+        <label>块数（2-10）：<input type="number" id="manual-num-blocks" min="2" max="10" value="5"></label>
+        <label>查找键：<input type="number" id="manual-key" value="46"></label>
+      </div>
+      <div class="manual-array-row">
+        <label>数组元素（空格或逗号分隔，共 块大小×块数 个整数）：</label>
+        <textarea id="manual-array-input" rows="3" placeholder="例如：8 14 6 9 10 22 34 18 19 31 40 38 54 66 46 71 78 68 80 85 100 94 88 96 87">8 14 6 9 10 22 34 18 19 31 40 38 54 66 46 71 78 68 80 85 100 94 88 96 87</textarea>
+      </div>
+      <button id="btn-apply-manual" class="ctrl-btn primary" style="margin-top:8px">✓ 应用数据</button>
+    </div>
+
+    <div id="random-input-panel" class="source-panel hidden">
+      <div class="random-params-row">
+        <label>每块大小（2-10）：<input type="number" id="random-block-size" min="2" max="10" value="5"></label>
+        <label>块数（2-10）：<input type="number" id="random-num-blocks" min="2" max="10" value="5"></label>
+        <button id="btn-generate-random" class="ctrl-btn primary">🎲 生成随机数据</button>
+      </div>
+      <div id="random-key-display" style="margin-top:6px;font-size:0.85rem;color:#333;"></div>
+    </div>
+  </div>
+</section>
+
 <!-- ===== 2. CONTROLS ===== -->
 <section id="controls">
   <div class="controls-inner">
@@ -50,13 +93,13 @@
 
     <!-- Array visualization panel -->
     <div class="data-panel" id="array-panel">
-      <h3 class="panel-title">顺序表（25个元素，5块，每块5个）</h3>
+      <h3 class="panel-title" id="panel-title-array">顺序表（25个元素，5块，每块5个）</h3>
       <div id="array-visual"></div>
     </div>
 
     <!-- Index table panel -->
     <div class="data-panel" id="index-panel">
-      <h3 class="panel-title">索引表（5项）</h3>
+      <h3 class="panel-title" id="panel-title-index">索引表（5项）</h3>
       <div id="index-table-visual"></div>
     </div>
 
@@ -131,6 +174,32 @@
     <p style="font-size:0.8rem;color:#888;margin-top:10px;">
       ※ b = 块数 = √n 时平均查找性能最优。本例 b=5，s=5，总顺序查找平均次数 ≈ (b+1)/2 + (s+1)/2 = 3 + 3 = 6 次。折半索引进一步将索引查找降为 O(log b)。链式存储允许块内元素动态插删，但空间开销更大。
     </p>
+  </section>
+
+  <!-- ===== 7. FILE I/O ===== -->
+  <section id="file-io">
+    <h3 class="section-title">文件输入输出</h3>
+    <div class="file-io-inner">
+      <div class="file-io-group">
+        <h4>📂 文件输入（part1-input.txt 格式）</h4>
+        <p class="file-format-hint">格式：第1行为查找次数 N，后续 N 行各一个查找键</p>
+        <input type="file" id="file-input-p1" accept=".txt">
+        <div class="file-display">
+          <label>输入文件内容：</label>
+          <textarea id="input-display-p1" rows="6" readonly placeholder="上传文件后此处显示内容…"></textarea>
+        </div>
+        <button id="btn-apply-file-p1" class="ctrl-btn primary" disabled>✓ 批量查找并生成输出</button>
+      </div>
+      <div class="file-io-group">
+        <h4>📄 文件输出（part1-output.txt 格式）</h4>
+        <button id="btn-generate-output-p1" class="ctrl-btn">⚙ 生成当前键的输出</button>
+        <button id="btn-download-output-p1" class="ctrl-btn" disabled>⬇ 下载 part1-output.txt</button>
+        <div class="file-display">
+          <label>输出结果：</label>
+          <textarea id="output-display-p1" rows="8" readonly placeholder="点击"生成输出"后此处显示结果…"></textarea>
+        </div>
+      </div>
+    </div>
   </section>
 
 </main>

@@ -1,48 +1,48 @@
 'use strict';
 
 // ============================================================
-//  DATA  —  matches part1/block_search.c exactly
+//  DEFAULT DATA  —  matches part1/block_search.c exactly
 // ============================================================
 
-/** The 25-element array from block_search.c: int a[N] */
-const ARRAY = [
-  8, 14,  6,  9, 10,   // Block 0 (1-indexed: Block 1), max=14
- 22, 34, 18, 19, 31,   // Block 1 (1-indexed: Block 2), max=34
- 40, 38, 54, 66, 46,   // Block 2 (1-indexed: Block 3), max=66
- 71, 78, 68, 80, 85,   // Block 3 (1-indexed: Block 4), max=85
-100, 94, 88, 96, 87    // Block 4 (1-indexed: Block 5), max=100
+const DEFAULT_ARRAY = [
+  8, 14,  6,  9, 10,
+ 22, 34, 18, 19, 31,
+ 40, 38, 54, 66, 46,
+ 71, 78, 68, 80, 85,
+100, 94, 88, 96, 87
 ];
+const DEFAULT_BLOCK_SIZE = 5;
+const DEFAULT_NUM_BLOCKS = 5;
+const DEFAULT_KEY        = 46;
 
-const BLOCK_SIZE = 5;   // #define BLOCK_SIZE 5
-const NUM_BLOCKS = 5;   // #define NUM_BLOCKS 5
-const KEY        = 46;  // the search key used throughout the demo
+let ARRAY      = [...DEFAULT_ARRAY];
+let BLOCK_SIZE = DEFAULT_BLOCK_SIZE;
+let NUM_BLOCKS = DEFAULT_NUM_BLOCKS;
+let KEY        = DEFAULT_KEY;
 
-// Build index table: matches build_index() in block_search.c
-// IDX[b] = { max_val, start }  (start is 0-based array index)
-const IDX = [];
-for (let b = 0; b < NUM_BLOCKS; b++) {
-  const start = b * BLOCK_SIZE;
-  let max = ARRAY[start];
-  for (let i = start + 1; i < start + BLOCK_SIZE; i++) {
-    if (ARRAY[i] > max) max = ARRAY[i];
+let IDX          = [];
+let LINKED_BLOCKS = [];
+
+function rebuildDerived() {
+  IDX.length = 0;
+  for (let b = 0; b < NUM_BLOCKS; b++) {
+    const start = b * BLOCK_SIZE;
+    let max = ARRAY[start];
+    for (let i = start + 1; i < start + BLOCK_SIZE; i++) {
+      if (ARRAY[i] > max) max = ARRAY[i];
+    }
+    IDX.push({ max_val: max, start });
   }
-  IDX.push({ max_val: max, start });
-}
-// Result: IDX[0]={max_val:14,start:0}  IDX[1]={max_val:34,start:5}
-//         IDX[2]={max_val:66,start:10} IDX[3]={max_val:85,start:15}
-//         IDX[4]={max_val:100,start:20}
-
-// Linked list representation for linked_block_search:
-// Each block is an array of values in linked-list order (same as ARRAY order,
-// matching the tail-insertion in build_linked_blocks()).
-const LINKED_BLOCKS = [];
-for (let b = 0; b < NUM_BLOCKS; b++) {
-  const nodes = [];
-  for (let i = b * BLOCK_SIZE; i < (b + 1) * BLOCK_SIZE; i++) {
-    nodes.push(ARRAY[i]);
+  LINKED_BLOCKS.length = 0;
+  for (let b = 0; b < NUM_BLOCKS; b++) {
+    const nodes = [];
+    for (let i = b * BLOCK_SIZE; i < (b + 1) * BLOCK_SIZE; i++) {
+      nodes.push(ARRAY[i]);
+    }
+    LINKED_BLOCKS.push({ max_val: IDX[b].max_val, nodes });
   }
-  LINKED_BLOCKS.push({ max_val: IDX[b].max_val, nodes });
 }
+rebuildDerived();
 
 // ============================================================
 //  STEP BUILDER HELPER
@@ -679,6 +679,9 @@ function initApp() {
   });
 
   setupEventListeners();
+  setupDataSourceHandlers();
+  setupFileIOHandlers();
+  updateHeaderInfo();
   renderStep(currentStep());
 }
 
@@ -1160,6 +1163,216 @@ function escHtml(str) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
+}
+
+// ============================================================
+//  REBUILD APP  (called after data changes)
+// ============================================================
+function rebuildApp() {
+  rebuildDerived();
+  APP.allSteps.sequential = generateSequentialSteps();
+  APP.allSteps.binary     = generateBinarySteps();
+  APP.allSteps.linked     = generateLinkedSteps();
+
+  ['sequential', 'binary', 'linked'].forEach(algo => {
+    const steps = APP.allSteps[algo];
+    steps.forEach((s, i) => {
+      APP.allSteps[algo][i] = Object.assign({}, s, { stepIndex: i, totalSteps: steps.length });
+    });
+  });
+
+  stopPlayback();
+  APP.currentIndex = 0;
+  updateHeaderInfo();
+  renderStep(currentStep());
+  updateNavButtons();
+}
+
+function updateHeaderInfo() {
+  const subtitle = document.querySelector('.header-subtitle');
+  if (subtitle) {
+    subtitle.textContent =
+      `part1/block_search.c 教学演示 · ${ARRAY.length}个元素，${NUM_BLOCKS}块，每块${BLOCK_SIZE}个，查找关键字 ${KEY}`;
+  }
+  const arrayTitle = document.getElementById('panel-title-array');
+  if (arrayTitle) {
+    arrayTitle.textContent = `顺序表（${ARRAY.length}个元素，${NUM_BLOCKS}块，每块${BLOCK_SIZE}个）`;
+  }
+  const indexTitle = document.getElementById('panel-title-index');
+  if (indexTitle) {
+    indexTitle.textContent = `索引表（${NUM_BLOCKS}项）`;
+  }
+}
+
+// ============================================================
+//  DATA SOURCE HANDLERS
+// ============================================================
+function setupDataSourceHandlers() {
+  document.querySelectorAll('input[name="data-source"]').forEach(radio => {
+    radio.addEventListener('change', e => {
+      document.getElementById('manual-input-panel').classList.toggle('hidden', e.target.value !== 'manual');
+      document.getElementById('random-input-panel').classList.toggle('hidden', e.target.value !== 'random');
+      if (e.target.value === 'default') {
+        ARRAY      = [...DEFAULT_ARRAY];
+        BLOCK_SIZE = DEFAULT_BLOCK_SIZE;
+        NUM_BLOCKS = DEFAULT_NUM_BLOCKS;
+        KEY        = DEFAULT_KEY;
+        rebuildApp();
+      }
+    });
+  });
+
+  document.getElementById('btn-apply-manual').addEventListener('click', () => {
+    const bs = Math.min(10, Math.max(2, parseInt(document.getElementById('manual-block-size').value) || 5));
+    const nb = Math.min(10, Math.max(2, parseInt(document.getElementById('manual-num-blocks').value) || 5));
+    const k  = parseInt(document.getElementById('manual-key').value) || 0;
+    const raw = document.getElementById('manual-array-input').value;
+    const vals = raw.split(/[\s,]+/).map(Number).filter(n => !isNaN(n));
+    const needed = bs * nb;
+    if (vals.length < needed) {
+      alert(`需要 ${needed} 个整数（当前仅 ${vals.length} 个）`);
+      return;
+    }
+    ARRAY      = vals.slice(0, needed);
+    BLOCK_SIZE = bs;
+    NUM_BLOCKS = nb;
+    KEY        = k;
+    rebuildApp();
+  });
+
+  document.getElementById('btn-generate-random').addEventListener('click', () => {
+    const bs = Math.min(10, Math.max(2, parseInt(document.getElementById('random-block-size').value) || 5));
+    const nb = Math.min(10, Math.max(2, parseInt(document.getElementById('random-num-blocks').value) || 5));
+    ARRAY      = generateSortedBlockArray(bs, nb);
+    BLOCK_SIZE = bs;
+    NUM_BLOCKS = nb;
+    KEY        = ARRAY[Math.floor(Math.random() * ARRAY.length)];
+    document.getElementById('random-key-display').textContent = `查找键：${KEY}`;
+    rebuildApp();
+  });
+}
+
+function generateSortedBlockArray(blockSize, numBlocks) {
+  const arr = [];
+  const gap = 15;
+  for (let b = 0; b < numBlocks; b++) {
+    const base = b * gap;
+    for (let i = 0; i < blockSize; i++) {
+      arr.push(base + Math.floor(Math.random() * gap) + 1);
+    }
+  }
+  return arr;
+}
+
+// ============================================================
+//  FILE I/O HANDLERS
+// ============================================================
+function setupFileIOHandlers() {
+  let parsedKeys = null;
+
+  document.getElementById('file-input-p1').addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const text = ev.target.result;
+      document.getElementById('input-display-p1').value = text;
+      parsedKeys = parseInputFile(text);
+      document.getElementById('btn-apply-file-p1').disabled = !parsedKeys;
+    };
+    reader.readAsText(file);
+  });
+
+  document.getElementById('btn-apply-file-p1').addEventListener('click', () => {
+    if (!parsedKeys) return;
+    const output = runSearchKeys(parsedKeys);
+    document.getElementById('output-display-p1').value = output;
+    document.getElementById('btn-download-output-p1').disabled = false;
+    document._part1OutputText = output;
+  });
+
+  document.getElementById('btn-generate-output-p1').addEventListener('click', () => {
+    const output = generateOutputText();
+    document.getElementById('output-display-p1').value = output;
+    document.getElementById('btn-download-output-p1').disabled = false;
+    document._part1OutputText = output;
+  });
+
+  document.getElementById('btn-download-output-p1').addEventListener('click', () => {
+    const text = document._part1OutputText || '';
+    const blob = new Blob([text], { type: 'text/plain' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'part1-output.txt';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+}
+
+function parseInputFile(text) {
+  const lines = text.trim().split(/\n/).map(l => l.trim()).filter(l => l);
+  if (lines.length < 1) return null;
+  const n = parseInt(lines[0]);
+  if (!n || n < 1) return null;
+  const keys = [];
+  for (let i = 1; i <= n && i < lines.length; i++) {
+    const k = parseInt(lines[i]);
+    if (!isNaN(k)) keys.push(k);
+  }
+  return keys.length > 0 ? keys : null;
+}
+
+function runSearchKeys(keys) {
+  let out = '========================================\n';
+  out += '分块查找 — 批量查找结果\n';
+  out += `顺序表：${ARRAY.length} 个元素，${NUM_BLOCKS} 块，每块 ${BLOCK_SIZE} 个\n`;
+  out += '========================================\n\n';
+  keys.forEach(k => {
+    out += `查找关键字 ${k}：\n`;
+    let result = sequentialSearchKey(k);
+    out += `  顺序索引分块查找：${result >= 0 ? `找到，位置 ${result + 1}` : '未找到'}\n`;
+    result = binarySearchKey(k);
+    out += `  折半索引分块查找：${result >= 0 ? `找到，位置 ${result + 1}` : '未找到'}\n`;
+    out += '\n';
+  });
+  return out;
+}
+
+function sequentialSearchKey(key) {
+  let blockId = -1;
+  for (let b = 0; b < NUM_BLOCKS; b++) {
+    if (key <= IDX[b].max_val) { blockId = b; break; }
+  }
+  if (blockId < 0) return -1;
+  const start = IDX[blockId].start;
+  for (let i = start; i < start + BLOCK_SIZE; i++) {
+    if (ARRAY[i] === key) return i;
+  }
+  return -1;
+}
+
+function binarySearchKey(key) {
+  let lo = 0, hi = NUM_BLOCKS - 1, blockId = -1;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    if (key <= IDX[mid].max_val) {
+      if (mid === 0 || key > IDX[mid - 1].max_val) { blockId = mid; break; }
+      hi = mid - 1;
+    } else {
+      lo = mid + 1;
+    }
+  }
+  if (blockId < 0) { blockId = lo < NUM_BLOCKS ? lo : -1; }
+  if (blockId < 0) return -1;
+  const start = IDX[blockId].start;
+  for (let i = start; i < start + BLOCK_SIZE; i++) {
+    if (ARRAY[i] === key) return i;
+  }
+  return -1;
+}
+
+function generateOutputText() {
+  return runSearchKeys([KEY]);
 }
 
 // ============================================================

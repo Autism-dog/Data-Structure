@@ -455,7 +455,8 @@ const APP = {
   currentAlgo: 'naive',
   currentIndex: 0,
   playTimer: null,
-  speed: 1100  /* default playback interval in milliseconds (medium speed) */
+  speed: 1100,  /* default playback interval in milliseconds (medium speed) */
+  outputText: ''  /* stores last generated output for download */
 };
 
 // ============================================================
@@ -489,7 +490,8 @@ function updatePanelTitles() {
   document.querySelector('#source-matrix-panel .panel-title').textContent = `原矩阵（${MATRIX_ROWS}×${MATRIX_COLS}）`;
   document.querySelector('#source-triples-panel .panel-title').textContent = `原三元组表（${terms} 项，按行序）`;
   document.querySelector('#result-matrix-panel .panel-title').textContent = `转置矩阵（${MATRIX_COLS}×${MATRIX_ROWS}）`;
-  document.querySelector('.header-subtitle').textContent = `part3/sparse_matrix.c 教学演示 · ${MATRIX_ROWS}×${MATRIX_COLS} 矩阵，${terms} 个非零元`;
+  const subtitle = document.querySelector('.header-subtitle');
+  if (subtitle) subtitle.textContent = `part3/sparse_matrix.c 教学演示 · ${MATRIX_ROWS}×${MATRIX_COLS} 矩阵，${terms} 个非零元`;
 }
 
 // ============================================================
@@ -850,10 +852,10 @@ function renderOptimizedState(el, step) {
     </div>`;
 }
 
-// Build num/cpot array HTML (arr is 1-indexed, index 0 unused)
+// Build num/cpot array HTML (arr is 1-indexed, index 0 unused; iterate 1..MATRIX_COLS)
 function makeArrayHTML(label, arr, hlIdx, hlClass) {
   let cells = '';
-  for (let i = 1; i < arr.length; i++) {
+  for (let i = 1; i <= arr.length - 1; i++) {
     const hl = (hlIdx === i) ? ` ${hlClass}` : '';
     cells += `
       <div class="array-cell${hl}">
@@ -871,6 +873,10 @@ function makeArrayHTML(label, arr, hlIdx, hlClass) {
 // ============================================================
 //  DATA SOURCE HANDLERS
 // ============================================================
+function clampDim(value, defaultVal) {
+  return Math.min(15, Math.max(1, parseInt(value) || defaultVal));
+}
+
 function setupDataSourceHandlers() {
   // Radio button switching
   document.querySelectorAll('input[name="data-source"]').forEach(radio => {
@@ -885,8 +891,8 @@ function setupDataSourceHandlers() {
 
   // Manual: create grid button
   document.getElementById('btn-create-grid').addEventListener('click', () => {
-    const r = Math.min(15, Math.max(1, parseInt(document.getElementById('manual-rows').value) || 6));
-    const c = Math.min(15, Math.max(1, parseInt(document.getElementById('manual-cols').value) || 6));
+    const r = clampDim(document.getElementById('manual-rows').value, 6);
+    const c = clampDim(document.getElementById('manual-cols').value, 6);
     buildInputGrid(r, c);
   });
 
@@ -898,8 +904,8 @@ function setupDataSourceHandlers() {
 
   // Random: generate button
   document.getElementById('btn-generate-random').addEventListener('click', () => {
-    const r = Math.min(15, Math.max(1, parseInt(document.getElementById('random-rows').value) || 6));
-    const c = Math.min(15, Math.max(1, parseInt(document.getElementById('random-cols').value) || 6));
+    const r = clampDim(document.getElementById('random-rows').value, 6);
+    const c = clampDim(document.getElementById('random-cols').value, 6);
     const density = Math.min(60, Math.max(5, parseInt(document.getElementById('random-density').value) || 20));
     const matrix = generateRandomMatrix(r, c, density);
     rebuildApp(matrix);
@@ -993,11 +999,11 @@ function setupFileIOHandlers() {
     const output = generateOutputText();
     document.getElementById('output-display').value = output;
     document.getElementById('btn-download-output').disabled = false;
-    document._part3OutputText = output;
+    APP.outputText = output;
   });
 
   document.getElementById('btn-download-output').addEventListener('click', () => {
-    const text = document._part3OutputText || '';
+    const text = APP.outputText || '';
     const blob = new Blob([text], { type: 'text/plain' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);

@@ -1,10 +1,15 @@
 /*
  * 综合实验：稀疏矩阵转置算法
  *
- * 任务：
+ * 功能：
  *   1. 快速稀疏矩阵转置算法（Fast Transpose）
- *   2. 进一步优化：用更少存储空间的原地/节省空间版本
+ *   2. 进一步优化：用更少存储空间的版本
  *   3. 时间复杂度分析，与非快速算法对比
+ *
+ * I/O 模式：
+ *   [1] 屏幕交互模式 — 命令行演示（默认矩阵或用户自定义输入）
+ *   [2] 文件交互模式 — 从 part3-input.txt 读取矩阵，结果写入 part3-output.txt
+ *   [3] 测试用例模式 — 运行至少 4 个预定义测试案例
  */
 
 #include <stdio.h>
@@ -15,19 +20,27 @@
 /* ─────────────────────────────────────────────
    三元组表（稀疏矩阵压缩存储）
    ───────────────────────────────────────────── */
-#define MAXTERMS 100   /* 最多非零元素个数 */
+#define MAXTERMS 1000
+#define MAXDIM    50
+
+#define INPUT_FILE  "part3-input.txt"
+#define OUTPUT_FILE "part3-output.txt"
 
 typedef struct {
     int row, col, val;
 } Triple;
 
 typedef struct {
-    Triple data[MAXTERMS + 1];   /* data[0] 不用（1-indexed） */
-    int    rows, cols, terms;    /* 行数、列数、非零元素数 */
+    Triple data[MAXTERMS + 1];
+    int    rows, cols, terms;
 } TSMatrix;
 
+/* 全局输出流 */
+static FILE *g_out = NULL;
+#define POUT (g_out ? g_out : stdout)
+
 /* ─────────────────────────────────────────────
-   示例矩阵
+   默认示例矩阵（6×6）
    ─────────────────────────────────────────────
    M =
       0  12   9   0   0   0
@@ -37,9 +50,20 @@ typedef struct {
      15   0   0  -7   0   0
       0   0  -4   0   0   0
    ───────────────────────────────────────────── */
+static int default_arr[6][6] = {
+    { 0, 12,  9,  0,  0,  0},
+    { 0,  0,  0,  0,  0,  0},
+    {-3,  0,  0,  0,  0, 14},
+    { 0,  0, 24,  0, 18,  0},
+    {15,  0,  0, -7,  0,  0},
+    { 0,  0, -4,  0,  0,  0}
+};
 
-/* 从二维数组建立三元组表 */
-static void build_tsmatrix(TSMatrix *M, int arr[][6], int rows, int cols)
+/* ─────────────────────────────────────────────
+   从二维数组建立三元组表
+   ───────────────────────────────────────────── */
+static void build_tsmatrix_from_arr(TSMatrix *M, int arr[][MAXDIM],
+                                    int rows, int cols)
 {
     M->rows  = rows;
     M->cols  = cols;
@@ -47,6 +71,10 @@ static void build_tsmatrix(TSMatrix *M, int arr[][6], int rows, int cols)
     for (int i = 0; i < rows; i++) {
         for (int j = 0; j < cols; j++) {
             if (arr[i][j] != 0) {
+                if (M->terms >= MAXTERMS) {
+                    fprintf(stderr, "非零元素超出上限 %d\n", MAXTERMS);
+                    return;
+                }
                 M->terms++;
                 M->data[M->terms].row = i + 1;
                 M->data[M->terms].col = j + 1;
@@ -61,28 +89,29 @@ static void build_tsmatrix(TSMatrix *M, int arr[][6], int rows, int cols)
    ───────────────────────────────────────────── */
 static void print_matrix_2d(const TSMatrix *M, const char *title)
 {
-    /* 先还原为二维数组 */
-    int arr[7][7] = {0};
+    int arr[MAXDIM + 1][MAXDIM + 1];
+    memset(arr, 0, sizeof(arr));
     for (int t = 1; t <= M->terms; t++) {
         arr[M->data[t].row][M->data[t].col] = M->data[t].val;
     }
 
-    printf("\n  %s（%d×%d，共 %d 个非零元素）:\n\n", title, M->rows, M->cols, M->terms);
-    printf("       ");
-    for (int j = 1; j <= M->cols; j++) printf("列%d   ", j);
-    printf("\n    ┌─");
-    for (int j = 1; j <= M->cols; j++) printf("──────");
-    printf("─┐\n");
+    fprintf(POUT, "\n  %s（%d×%d，共 %d 个非零元素）:\n\n",
+            title, M->rows, M->cols, M->terms);
+    fprintf(POUT, "       ");
+    for (int j = 1; j <= M->cols; j++) fprintf(POUT, "列%-3d  ", j);
+    fprintf(POUT, "\n    ┌─");
+    for (int j = 1; j <= M->cols; j++) fprintf(POUT, "──────");
+    fprintf(POUT, "─┐\n");
     for (int i = 1; i <= M->rows; i++) {
-        printf("  行%d │", i);
+        fprintf(POUT, "  行%d │", i);
         for (int j = 1; j <= M->cols; j++) {
-            printf("  %4d", arr[i][j]);
+            fprintf(POUT, "  %4d", arr[i][j]);
         }
-        printf("  │\n");
+        fprintf(POUT, "  │\n");
     }
-    printf("    └─");
-    for (int j = 1; j <= M->cols; j++) printf("──────");
-    printf("─┘\n");
+    fprintf(POUT, "    └─");
+    for (int j = 1; j <= M->cols; j++) fprintf(POUT, "──────");
+    fprintf(POUT, "─┘\n");
 }
 
 /* ─────────────────────────────────────────────
@@ -90,23 +119,23 @@ static void print_matrix_2d(const TSMatrix *M, const char *title)
    ───────────────────────────────────────────── */
 static void print_tsmatrix(const TSMatrix *M, const char *title)
 {
-    printf("\n  %s 三元组表（rows=%d, cols=%d, terms=%d）:\n\n",
+    fprintf(POUT, "\n  %s 三元组表（rows=%d, cols=%d, terms=%d）:\n\n",
            title, M->rows, M->cols, M->terms);
-    printf("    ┌──────┬──────┬──────────┐\n");
-    printf("    │  行  │  列  │   值     │\n");
-    printf("    ├──────┼──────┼──────────┤\n");
+    fprintf(POUT, "    ┌──────┬──────┬──────────┐\n");
+    fprintf(POUT, "    │  行  │  列  │   值     │\n");
+    fprintf(POUT, "    ├──────┼──────┼──────────┤\n");
+    if (M->terms == 0) {
+        fprintf(POUT, "    │      （无非零元素）       │\n");
+    }
     for (int t = 1; t <= M->terms; t++) {
-        printf("    │  %2d  │  %2d  │  %6d  │\n",
+        fprintf(POUT, "    │  %2d  │  %2d  │  %6d  │\n",
                M->data[t].row, M->data[t].col, M->data[t].val);
     }
-    printf("    └──────┴──────┴──────────┘\n");
+    fprintf(POUT, "    └──────┴──────┴──────────┘\n");
 }
 
 /* ─────────────────────────────────────────────
-   普通转置（非快速）：时间复杂度 O(cols × terms)
-   ─────────────────────────────────────────────
-   按"列"顺序扫描原矩阵，每次扫描一列，把该列所有元素
-   按行顺序取出放入转置矩阵。
+   普通转置：O(cols × terms)
    ───────────────────────────────────────────── */
 static void transpose_naive(const TSMatrix *M, TSMatrix *T)
 {
@@ -116,9 +145,8 @@ static void transpose_naive(const TSMatrix *M, TSMatrix *T)
 
     if (M->terms == 0) return;
 
-    int q = 1;   /* 转置矩阵三元组下标 */
+    int q = 1;
     for (int col = 1; col <= M->cols; col++) {
-        /* 扫描整个原始三元组表，找 col 列的元素 */
         for (int p = 1; p <= M->terms; p++) {
             if (M->data[p].col == col) {
                 T->data[q].row = M->data[p].col;
@@ -131,11 +159,7 @@ static void transpose_naive(const TSMatrix *M, TSMatrix *T)
 }
 
 /* ─────────────────────────────────────────────
-   快速转置（Fast Transpose）：时间复杂度 O(cols + terms)
-   ─────────────────────────────────────────────
-   利用两个辅助数组：
-     num[col]  : 原矩阵第 col 列非零元素个数
-     cpot[col] : 该列元素在转置矩阵中的起始位置
+   快速转置：O(cols + terms)
    ───────────────────────────────────────────── */
 static void transpose_fast(const TSMatrix *M, TSMatrix *T)
 {
@@ -148,30 +172,27 @@ static void transpose_fast(const TSMatrix *M, TSMatrix *T)
     int num[MAXTERMS]  = {0};
     int cpot[MAXTERMS] = {0};
 
-    /* 第一步：统计每列非零元素个数 */
     for (int t = 1; t <= M->terms; t++) {
         num[M->data[t].col]++;
     }
 
-    /* 第二步：计算每列在 T 中的起始位置（前缀和） */
     cpot[1] = 1;
     for (int col = 2; col <= M->cols; col++) {
         cpot[col] = cpot[col - 1] + num[col - 1];
     }
 
-    /* 第三步：遍历原三元组表，依次放入 T */
     for (int t = 1; t <= M->terms; t++) {
         int col = M->data[t].col;
         int q   = cpot[col];
         T->data[q].row = M->data[t].col;
         T->data[q].col = M->data[t].row;
         T->data[q].val = M->data[t].val;
-        cpot[col]++;   /* 该列下一个元素存放位置后移 */
+        cpot[col]++;
     }
 }
 
 /* ─────────────────────────────────────────────
-   可视化快速转置的辅助数组
+   快速转置辅助数组可视化
    ───────────────────────────────────────────── */
 static void print_fast_transpose_detail(const TSMatrix *M)
 {
@@ -182,38 +203,32 @@ static void print_fast_transpose_detail(const TSMatrix *M)
     cpot[1] = 1;
     for (int col = 2; col <= M->cols; col++) cpot[col] = cpot[col-1] + num[col-1];
 
-    printf("\n  快速转置辅助数组（按原矩阵列编号 1~%d）:\n\n", M->cols);
-    printf("    ┌──────");
-    for (int c = 1; c <= M->cols; c++) printf("┬──────");
-    printf("┐\n");
-    printf("    │ 列号 ");
-    for (int c = 1; c <= M->cols; c++) printf("│  %-3d ", c);
-    printf("│\n");
-    printf("    ├──────");
-    for (int c = 1; c <= M->cols; c++) printf("┼──────");
-    printf("┤\n");
-    printf("    │ num  ");
-    for (int c = 1; c <= M->cols; c++) printf("│  %-3d ", num[c]);
-    printf("│  (每列非零元个数)\n");
-    printf("    ├──────");
-    for (int c = 1; c <= M->cols; c++) printf("┼──────");
-    printf("┤\n");
-    printf("    │ cpot ");
-    for (int c = 1; c <= M->cols; c++) printf("│  %-3d ", cpot[c]);
-    printf("│  (该列在T中的起始位置)\n");
-    printf("    └──────");
-    for (int c = 1; c <= M->cols; c++) printf("┴──────");
-    printf("┘\n");
+    fprintf(POUT, "\n  快速转置辅助数组（按原矩阵列编号 1~%d）:\n\n", M->cols);
+    fprintf(POUT, "    ┌──────");
+    for (int c = 1; c <= M->cols; c++) fprintf(POUT, "┬──────");
+    fprintf(POUT, "┐\n");
+    fprintf(POUT, "    │ 列号 ");
+    for (int c = 1; c <= M->cols; c++) fprintf(POUT, "│  %-3d ", c);
+    fprintf(POUT, "│\n");
+    fprintf(POUT, "    ├──────");
+    for (int c = 1; c <= M->cols; c++) fprintf(POUT, "┼──────");
+    fprintf(POUT, "┤\n");
+    fprintf(POUT, "    │ num  ");
+    for (int c = 1; c <= M->cols; c++) fprintf(POUT, "│  %-3d ", num[c]);
+    fprintf(POUT, "│  (每列非零元个数)\n");
+    fprintf(POUT, "    ├──────");
+    for (int c = 1; c <= M->cols; c++) fprintf(POUT, "┼──────");
+    fprintf(POUT, "┤\n");
+    fprintf(POUT, "    │ cpot ");
+    for (int c = 1; c <= M->cols; c++) fprintf(POUT, "│  %-3d ", cpot[c]);
+    fprintf(POUT, "│  (该列在T中的起始位置)\n");
+    fprintf(POUT, "    └──────");
+    for (int c = 1; c <= M->cols; c++) fprintf(POUT, "┴──────");
+    fprintf(POUT, "┘\n");
 }
 
 /* ─────────────────────────────────────────────
-   优化版快速转置：使用更少的辅助存储空间
-   ─────────────────────────────────────────────
-   普通快速转置需要两个大小为 cols+1 的辅助数组（num 和 cpot）。
-   优化方法：只保留 cpot 数组（起始位置），num 数组的统计
-   与 cpot 的计算合并，然后在转置过程中直接用 cpot 回退
-   （利用 cpot[col]-num[col] 还原起始位置），
-   从而只用一个辅助数组（cpot）完成快速转置。
+   优化版快速转置：只用 1 个辅助数组
    ───────────────────────────────────────────── */
 static void transpose_fast_optimized(const TSMatrix *M, TSMatrix *T)
 {
@@ -223,23 +238,19 @@ static void transpose_fast_optimized(const TSMatrix *M, TSMatrix *T)
 
     if (M->terms == 0) return;
 
-    /* 只申请一个大小为 cols+1 的数组 */
-    int *cpot = (int *)calloc(M->cols + 1, sizeof(int));
+    int *cpot = (int *)calloc(M->cols + 2, sizeof(int));
+    if (!cpot) { fprintf(stderr, "内存分配失败\n"); exit(1); }
 
-    /* 步骤1：用 cpot 先统计每列非零元素个数（复用为 num）*/
     for (int t = 1; t <= M->terms; t++) cpot[M->data[t].col]++;
 
-    /* 步骤2：原地转化为起始位置（后缀扫描）*/
-    /* 先把 cpot[col] 变成"本列在T中的结束位置+1"，从后往前做前缀和 */
     {
         int acc = M->terms + 1;
         for (int c = M->cols; c >= 1; c--) {
             acc -= cpot[c];
-            cpot[c] = acc;   /* cpot[c] 现在是第 c 列在 T 中的起始位置 */
+            cpot[c] = acc;
         }
     }
 
-    /* 步骤3：遍历原三元组表，依次放入 T */
     for (int t = 1; t <= M->terms; t++) {
         int col = M->data[t].col;
         int q   = cpot[col];
@@ -253,48 +264,37 @@ static void transpose_fast_optimized(const TSMatrix *M, TSMatrix *T)
 }
 
 /* ─────────────────────────────────────────────
-   时间复杂度分析与对比
+   时间复杂度对比分析
    ───────────────────────────────────────────── */
 static void complexity_analysis(int rows, int cols, int terms)
 {
-    printf("\n┌──────────────────────────────────────────────────────────────────────────────┐\n");
-    printf("│                       时间复杂度与空间复杂度对比分析                        │\n");
-    printf("├──────────────────────┬──────────────────────────────────────────────────────┤\n");
-    printf("│      算法            │   说明                                               │\n");
-    printf("├──────────────────────┼──────────────────────────────────────────────────────┤\n");
-    printf("│ 普通转置（非快速）   │ 时间: O(cols × terms)                               │\n");
-    printf("│                      │ 空间: O(1)（不含输出）                              │\n");
-    printf("│                      │ 适合: terms ≪ cols，否则退化为 O(cols²)             │\n");
-    printf("├──────────────────────┼──────────────────────────────────────────────────────┤\n");
-    printf("│ 快速转置             │ 时间: O(cols + terms)                               │\n");
-    printf("│                      │ 空间: O(cols)（两个辅助数组 num, cpot）             │\n");
-    printf("│                      │ 优点: 线性时间，一次扫描完成                        │\n");
-    printf("├──────────────────────┼──────────────────────────────────────────────────────┤\n");
-    printf("│ 优化快速转置         │ 时间: O(cols + terms)（同快速转置）                 │\n");
-    printf("│                      │ 空间: O(cols)（只用 1 个辅助数组，常数因子减半）    │\n");
-    printf("│                      │ 优点: 减少约一半辅助存储，常数项更小               │\n");
-    printf("└──────────────────────┴──────────────────────────────────────────────────────┘\n");
+    fprintf(POUT, "\n┌──────────────────────────────────────────────────────────────────────────────┐\n");
+    fprintf(POUT, "│                       时间复杂度与空间复杂度对比分析                        │\n");
+    fprintf(POUT, "├──────────────────────┬──────────────────────────────────────────────────────┤\n");
+    fprintf(POUT, "│      算法            │   说明                                               │\n");
+    fprintf(POUT, "├──────────────────────┼──────────────────────────────────────────────────────┤\n");
+    fprintf(POUT, "│ 普通转置（非快速）   │ 时间: O(cols × terms)                               │\n");
+    fprintf(POUT, "│                      │ 空间: O(1)（不含输出）                              │\n");
+    fprintf(POUT, "├──────────────────────┼──────────────────────────────────────────────────────┤\n");
+    fprintf(POUT, "│ 快速转置             │ 时间: O(cols + terms)                               │\n");
+    fprintf(POUT, "│                      │ 空间: O(cols)（两个辅助数组 num, cpot）             │\n");
+    fprintf(POUT, "├──────────────────────┼──────────────────────────────────────────────────────┤\n");
+    fprintf(POUT, "│ 优化快速转置         │ 时间: O(cols + terms)                               │\n");
+    fprintf(POUT, "│                      │ 空间: O(cols)（只用 1 个辅助数组）                  │\n");
+    fprintf(POUT, "└──────────────────────┴──────────────────────────────────────────────────────┘\n");
 
-    printf("\n  当前示例参数: rows=%d, cols=%d, terms=%d\n\n", rows, cols, terms);
+    fprintf(POUT, "\n  当前示例参数: rows=%d, cols=%d, terms=%d\n\n", rows, cols, terms);
 
     long naive_ops = (long)cols * terms;
     long fast_ops  = cols + terms;
 
-    printf("  操作次数估算:\n");
-    printf("    普通转置: cols × terms = %d × %d = %ld 次\n", cols, terms, naive_ops);
-    printf("    快速转置: cols + terms = %d + %d = %ld 次\n", cols, terms, fast_ops);
+    fprintf(POUT, "  操作次数估算:\n");
+    fprintf(POUT, "    普通转置: cols × terms = %d × %d = %ld 次\n", cols, terms, naive_ops);
+    fprintf(POUT, "    快速转置: cols + terms = %d + %d = %ld 次\n", cols, terms, fast_ops);
     if (fast_ops > 0 && naive_ops > 0) {
-        printf("    加速比   : ≈ %.1f 倍\n", (double)naive_ops / fast_ops);
+        fprintf(POUT, "    加速比   : ≈ %.1f 倍\n", (double)naive_ops / fast_ops);
     }
-
-    printf("\n  当 terms = rows×cols（矩阵满）时:\n");
-    printf("    普通转置 → O(cols × rows×cols) = O(rows×cols²)\n");
-    printf("    快速转置 → O(cols + rows×cols) = O(rows×cols)（仍为线性！）\n");
-
-    printf("\n  结论：\n");
-    printf("    • 快速转置和优化快速转置均比普通转置效率更高\n");
-    printf("    • 当稀疏度高（terms << rows×cols）时，两者均表现优秀\n");
-    printf("    • 优化版在内存敏感场景下更具优势（减少辅助数组）\n\n");
+    fprintf(POUT, "\n");
 }
 
 /* 验证两个转置矩阵是否相同 */
@@ -312,84 +312,333 @@ static int verify_equal(const TSMatrix *A, const TSMatrix *B)
 }
 
 /* ─────────────────────────────────────────────
-   主函数
+   整合：对给定矩阵运行全部转置演示
    ───────────────────────────────────────────── */
-int main(void)
+static void run_all_transpose(TSMatrix *M)
 {
-    /* 示例稀疏矩阵（6×6，稀疏） */
-    int arr[6][6] = {
-        { 0, 12,  9,  0,  0,  0},
-        { 0,  0,  0,  0,  0,  0},
-        {-3,  0,  0,  0,  0, 14},
-        { 0,  0, 24,  0, 18,  0},
-        {15,  0,  0, -7,  0,  0},
-        { 0,  0, -4,  0,  0,  0}
-    };
+    TSMatrix T_naive, T_fast, T_opt;
 
-    TSMatrix M, T_naive, T_fast, T_opt;
+    fprintf(POUT, "\n");
+    fprintf(POUT, "*****************************************************************\n");
+    fprintf(POUT, "*              综合实验：稀疏矩阵转置算法                         *\n");
+    fprintf(POUT, "*****************************************************************\n");
 
-    printf("\n");
-    printf("*****************************************************************\n");
-    printf("*              综合实验：稀疏矩阵转置算法                         *\n");
-    printf("*****************************************************************\n");
+    print_matrix_2d(M, "原始矩阵 M");
+    print_tsmatrix(M, "原始矩阵 M");
 
-    /* 建立原始矩阵 */
-    build_tsmatrix(&M, arr, 6, 6);
+    /* 任务1：快速转置 */
+    fprintf(POUT, "\n=================================================================\n");
+    fprintf(POUT, "【任务1】快速稀疏矩阵转置算法（Fast Transpose）\n");
+    fprintf(POUT, "=================================================================\n");
+    fprintf(POUT, "\n  算法思路:\n");
+    fprintf(POUT, "    ① 统计原矩阵每列非零元个数 → num[]\n");
+    fprintf(POUT, "    ② 计算每列在转置矩阵中的起始位置 → cpot[] = 前缀和\n");
+    fprintf(POUT, "    ③ 扫描原三元组表，按 cpot[col] 直接放入转置矩阵\n");
 
-    /* ── 展示原始矩阵 ── */
-    print_matrix_2d(&M, "原始矩阵 M");
-    print_tsmatrix(&M, "原始矩阵 M");
-
-    /* ── 任务1：快速转置 ── */
-    printf("\n=================================================================\n");
-    printf("【任务1】快速稀疏矩阵转置算法（Fast Transpose）\n");
-    printf("=================================================================\n");
-    printf("\n  算法思路:\n");
-    printf("    ① 统计原矩阵每列非零元个数 → num[]\n");
-    printf("    ② 计算每列在转置矩阵中的起始位置 → cpot[] = 前缀和\n");
-    printf("    ③ 扫描原三元组表，按 cpot[col] 直接放入转置矩阵\n");
-
-    print_fast_transpose_detail(&M);
-    transpose_fast(&M, &T_fast);
+    if (M->terms > 0) {
+        print_fast_transpose_detail(M);
+    }
+    transpose_fast(M, &T_fast);
     print_matrix_2d(&T_fast, "转置矩阵 T（快速转置）");
     print_tsmatrix(&T_fast, "转置矩阵 T（快速转置）");
 
-    /* ── 任务2：优化快速转置 ── */
-    printf("\n=================================================================\n");
-    printf("【任务2】优化快速转置（更少存储空间）\n");
-    printf("=================================================================\n");
-    printf("\n  优化思路:\n");
-    printf("    • 普通快速转置使用 num[] 和 cpot[] 两个辅助数组，共 2×cols 空间\n");
-    printf("    • 优化版将 num 的统计与 cpot 的计算合并到一个数组中\n");
-    printf("    • 通过从后往前的前缀和扫描，只用 1 个 cpot[] 数组即可\n");
-    printf("    • 辅助空间从 2×cols 降至 cols（减少约 50%%）\n\n");
+    /* 任务2：优化快速转置 */
+    fprintf(POUT, "\n=================================================================\n");
+    fprintf(POUT, "【任务2】优化快速转置（更少存储空间）\n");
+    fprintf(POUT, "=================================================================\n");
+    fprintf(POUT, "\n  优化思路:\n");
+    fprintf(POUT, "    • 普通快速转置使用 num[] 和 cpot[] 两个辅助数组\n");
+    fprintf(POUT, "    • 优化版将统计与计算合并，只用 1 个 cpot[] 数组\n");
+    fprintf(POUT, "    • 辅助空间从 2×cols 降至 cols（减少约 50%%）\n\n");
 
-    transpose_fast_optimized(&M, &T_opt);
+    transpose_fast_optimized(M, &T_opt);
     print_matrix_2d(&T_opt, "转置矩阵 T（优化快速转置）");
     print_tsmatrix(&T_opt, "转置矩阵 T（优化快速转置）");
 
-    /* 验证三种转置结果一致 */
-    transpose_naive(&M, &T_naive);
+    /* 验证 */
+    transpose_naive(M, &T_naive);
     if (verify_equal(&T_fast, &T_naive) && verify_equal(&T_opt, &T_naive)) {
-        printf("\n  ✓ 验证通过：三种转置算法结果完全一致\n");
+        fprintf(POUT, "\n  ✓ 验证通过：三种转置算法结果完全一致\n");
     } else {
-        printf("\n  ✗ 验证失败：结果不一致！\n");
+        fprintf(POUT, "\n  ✗ 验证失败：结果不一致！\n");
     }
 
-    /* ── 任务3：时间复杂度分析 ── */
-    printf("\n=================================================================\n");
-    printf("【任务3】时间复杂度分析与非快速算法对比\n");
-    printf("=================================================================\n");
+    /* 任务3：复杂度分析 */
+    fprintf(POUT, "\n=================================================================\n");
+    fprintf(POUT, "【任务3】时间复杂度分析与非快速算法对比\n");
+    fprintf(POUT, "=================================================================\n");
 
-    printf("\n  非快速转置（普通转置）三元组结果:\n");
+    fprintf(POUT, "\n  非快速转置（普通转置）结果:\n");
     print_matrix_2d(&T_naive, "转置矩阵 T（普通转置）");
     print_tsmatrix(&T_naive, "转置矩阵 T（普通转置）");
 
-    complexity_analysis(M.rows, M.cols, M.terms);
+    complexity_analysis(M->rows, M->cols, M->terms);
 
-    printf("*****************************************************************\n");
-    printf("*                   稀疏矩阵转置演示完毕                          *\n");
-    printf("*****************************************************************\n\n");
+    fprintf(POUT, "*****************************************************************\n");
+    fprintf(POUT, "*                   稀疏矩阵转置演示完毕                          *\n");
+    fprintf(POUT, "*****************************************************************\n\n");
+}
 
-    return 0;
+/* ─────────────────────────────────────────────
+   UI：菜单
+   ───────────────────────────────────────────── */
+static void show_menu(void)
+{
+    printf("\n");
+    printf("╔══════════════════════════════════════════════╗\n");
+    printf("║         综合实验：稀疏矩阵转置算法             ║\n");
+    printf("╠══════════════════════════════════════════════╣\n");
+    printf("║  [1] 屏幕交互模式（命令行输入输出）            ║\n");
+    printf("║  [2] 文件交互模式（文件输入输出）              ║\n");
+    printf("║  [3] 运行测试用例                             ║\n");
+    printf("║  [0] 退出程序                                 ║\n");
+    printf("╠══════════════════════════════════════════════╣\n");
+    printf("║  请输入选项: ");
+}
+
+/* 模式1：屏幕交互 */
+static void screen_mode(void)
+{
+    g_out = stdout;
+    printf("\n【屏幕交互模式】\n");
+    printf("  请选择矩阵来源：\n");
+    printf("    [1] 使用内置默认矩阵（6×6 示例稀疏矩阵）\n");
+    printf("    [2] 手动输入矩阵\n");
+    printf("  请选择: ");
+
+    int sub;
+    if (scanf("%d", &sub) != 1) { printf("  输入无效\n"); return; }
+
+    TSMatrix M;
+    if (sub == 1) {
+        /* 使用默认矩阵（build from default_arr） */
+        int tmp[MAXDIM][MAXDIM];
+        memset(tmp, 0, sizeof(tmp));
+        for (int i = 0; i < 6; i++)
+            for (int j = 0; j < 6; j++)
+                tmp[i][j] = default_arr[i][j];
+        build_tsmatrix_from_arr(&M, tmp, 6, 6);
+    } else if (sub == 2) {
+        int rows, cols;
+        printf("  请输入行数（≤%d）: ", MAXDIM);
+        if (scanf("%d", &rows) != 1 || rows <= 0 || rows > MAXDIM) {
+            printf("  行数无效\n"); return;
+        }
+        printf("  请输入列数（≤%d）: ", MAXDIM);
+        if (scanf("%d", &cols) != 1 || cols <= 0 || cols > MAXDIM) {
+            printf("  列数无效\n"); return;
+        }
+        int tmp[MAXDIM][MAXDIM];
+        memset(tmp, 0, sizeof(tmp));
+        printf("  请逐行输入矩阵元素（%d 行 × %d 列）:\n", rows, cols);
+        for (int i = 0; i < rows; i++) {
+            printf("  第 %d 行: ", i + 1);
+            for (int j = 0; j < cols; j++) {
+                if (scanf("%d", &tmp[i][j]) != 1) {
+                    printf("  输入无效\n"); return;
+                }
+            }
+        }
+        build_tsmatrix_from_arr(&M, tmp, rows, cols);
+    } else {
+        printf("  无效选项\n"); return;
+    }
+
+    run_all_transpose(&M);
+}
+
+/* 模式2：文件交互 */
+static void file_mode(void)
+{
+    FILE *fin = fopen(INPUT_FILE, "r");
+    if (!fin) {
+        printf("  ✗ 无法打开输入文件 %s\n", INPUT_FILE);
+        printf("    请创建文件，格式：首行 rows cols，后续 rows 行每行 cols 个整数。\n");
+        printf("    示例（3×3）：\n");
+        printf("      3 3\n");
+        printf("      1 0 0\n");
+        printf("      0 2 0\n");
+        printf("      0 0 3\n");
+        return;
+    }
+
+    int rows, cols;
+    if (fscanf(fin, "%d %d", &rows, &cols) != 2 ||
+        rows <= 0 || rows > MAXDIM || cols <= 0 || cols > MAXDIM) {
+        printf("  ✗ 输入文件首行格式错误（应为：rows cols）\n");
+        fclose(fin);
+        return;
+    }
+
+    int tmp[MAXDIM][MAXDIM];
+    memset(tmp, 0, sizeof(tmp));
+    for (int i = 0; i < rows; i++) {
+        for (int j = 0; j < cols; j++) {
+            if (fscanf(fin, "%d", &tmp[i][j]) != 1) {
+                printf("  ✗ 读取矩阵元素失败（第%d行第%d列）\n", i+1, j+1);
+                fclose(fin);
+                return;
+            }
+        }
+    }
+    fclose(fin);
+
+    TSMatrix M;
+    build_tsmatrix_from_arr(&M, tmp, rows, cols);
+
+    FILE *fout = fopen(OUTPUT_FILE, "w");
+    if (!fout) {
+        printf("  ✗ 无法创建输出文件 %s\n", OUTPUT_FILE);
+        return;
+    }
+
+    printf("  ✓ 从文件 %s 读取 %d×%d 矩阵\n", INPUT_FILE, rows, cols);
+    printf("  ✓ 结果将写入文件 %s\n", OUTPUT_FILE);
+
+    g_out = fout;
+    fprintf(g_out, "========================================\n");
+    fprintf(g_out, "稀疏矩阵转置文件交互模式输出\n");
+    fprintf(g_out, "输入文件：%s\n", INPUT_FILE);
+    fprintf(g_out, "矩阵规模：%d×%d\n", rows, cols);
+    fprintf(g_out, "========================================\n");
+
+    run_all_transpose(&M);
+
+    fprintf(g_out, "========================================\n");
+    fprintf(g_out, "文件交互模式结束\n");
+    fprintf(g_out, "========================================\n");
+
+    fclose(fout);
+    g_out = stdout;
+    printf("  ✓ 完成，结果已保存至 %s\n", OUTPUT_FILE);
+}
+
+/* 模式3：测试用例
+   等价类划分 + 边界值分析：
+     TC1  正常案例  — 6×6 默认稀疏矩阵（多个非零元素）
+     TC2  边界值    — 全零矩阵（3×3，terms=0）
+     TC3  等价类    — 2×3 非方阵（rows≠cols）
+     TC4  边界值    — 1×1 矩阵（最小矩阵，非零元素）
+*/
+static void test_mode(void)
+{
+    /* TC1: 默认6×6矩阵 */
+    int arr1[MAXDIM][MAXDIM];
+    memset(arr1, 0, sizeof(arr1));
+    for (int i = 0; i < 6; i++)
+        for (int j = 0; j < 6; j++)
+            arr1[i][j] = default_arr[i][j];
+
+    /* TC2: 全零3×3矩阵 */
+    int arr2[MAXDIM][MAXDIM];
+    memset(arr2, 0, sizeof(arr2));
+
+    /* TC3: 2×3矩阵 */
+    int arr3[MAXDIM][MAXDIM];
+    memset(arr3, 0, sizeof(arr3));
+    arr3[0][1] = 5; arr3[1][2] = -3;
+
+    /* TC4: 1×1矩阵 */
+    int arr4[MAXDIM][MAXDIM];
+    memset(arr4, 0, sizeof(arr4));
+    arr4[0][0] = 42;
+
+    struct {
+        int arr[MAXDIM][MAXDIM];
+        int rows, cols;
+        const char *desc;
+    } cases[4];
+
+    memcpy(cases[0].arr, arr1, sizeof(arr1));
+    cases[0].rows = 6; cases[0].cols = 6;
+    cases[0].desc = "TC1 正常案例  — 6×6 默认稀疏矩阵";
+
+    memcpy(cases[1].arr, arr2, sizeof(arr2));
+    cases[1].rows = 3; cases[1].cols = 3;
+    cases[1].desc = "TC2 边界值    — 全零3×3矩阵（terms=0）";
+
+    memcpy(cases[2].arr, arr3, sizeof(arr3));
+    cases[2].rows = 2; cases[2].cols = 3;
+    cases[2].desc = "TC3 等价类    — 2×3非方阵（rows≠cols）";
+
+    memcpy(cases[3].arr, arr4, sizeof(arr4));
+    cases[3].rows = 1; cases[3].cols = 1;
+    cases[3].desc = "TC4 边界值    — 1×1矩阵（最小矩阵）";
+
+    int num_cases = 4;
+
+    FILE *fout = fopen(OUTPUT_FILE, "w");
+    if (!fout) {
+        printf("  ✗ 无法创建输出文件 %s，结果仅输出至屏幕\n", OUTPUT_FILE);
+    }
+
+    printf("\n【测试用例模式】共 %d 个测试案例\n", num_cases);
+    if (fout) {
+        printf("  ✓ 测试结果同步写入 %s\n", OUTPUT_FILE);
+        fprintf(fout, "========================================\n");
+        fprintf(fout, "稀疏矩阵转置 — 测试用例输出\n");
+        fprintf(fout, "测试案例数：%d\n", num_cases);
+        fprintf(fout, "========================================\n");
+    }
+
+    for (int i = 0; i < num_cases; i++) {
+        TSMatrix M;
+        build_tsmatrix_from_arr(&M, cases[i].arr, cases[i].rows, cases[i].cols);
+
+        printf("\n══════════════════════════════════════════\n");
+        printf("  %s\n", cases[i].desc);
+        printf("══════════════════════════════════════════\n");
+
+        g_out = stdout;
+        run_all_transpose(&M);
+
+        if (fout) {
+            fprintf(fout, "\n══════════════════════════════════════════\n");
+            fprintf(fout, "  %s\n", cases[i].desc);
+            fprintf(fout, "══════════════════════════════════════════\n");
+            g_out = fout;
+            run_all_transpose(&M);
+        }
+    }
+
+    if (fout) {
+        fprintf(fout, "========================================\n");
+        fprintf(fout, "测试完毕\n");
+        fprintf(fout, "========================================\n");
+        fclose(fout);
+        g_out = stdout;
+        printf("\n  ✓ 所有测试案例完成，结果已保存至 %s\n", OUTPUT_FILE);
+    }
+}
+
+/* ─────────────────────────────────────────────
+   主函数（菜单驱动）
+   ───────────────────────────────────────────── */
+int main(void)
+{
+    g_out = stdout;
+    int choice;
+
+    for (;;) {
+        show_menu();
+        if (scanf("%d", &choice) != 1) {
+            printf("  输入无效，请重新输入\n");
+            int c;
+            while ((c = getchar()) != '\n' && c != EOF);
+            continue;
+        }
+        printf("  ║\n");
+        printf("  ╚══════════════════════════════════════════════╝\n");
+
+        switch (choice) {
+            case 1: screen_mode(); break;
+            case 2: file_mode();   break;
+            case 3: test_mode();   break;
+            case 0:
+                printf("\n  再见！\n\n");
+                return 0;
+            default:
+                printf("\n  无效选项，请输入 0~3\n");
+        }
+    }
 }

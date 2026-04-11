@@ -238,7 +238,7 @@ static void transpose_fast_optimized(const TSMatrix *M, TSMatrix *T)
 
     if (M->terms == 0) return;
 
-    int *cpot = (int *)calloc(M->cols + 2, sizeof(int));
+    int *cpot = (int *)calloc(M->cols + 1, sizeof(int));
     if (!cpot) { fprintf(stderr, "内存分配失败\n"); exit(1); }
 
     for (int t = 1; t <= M->terms; t++) cpot[M->data[t].col]++;

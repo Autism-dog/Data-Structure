@@ -1,18 +1,12 @@
 'use strict';
 
 // ============================================================
-//  DATA — mirrors part2/graph_path.c exactly
+//  DEFAULT DATA — mirrors part2/graph_path.c exactly
 // ============================================================
-const NUM_VERTICES = 6;
-const SRC_V = 5, DST_V = 2;
+const DEFAULT_NUM_VERTICES = 6;
+const DEFAULT_SRC_V = 5, DEFAULT_DST_V = 2;
 
-// Adjacency list (1-indexed). Built by head-insert in C code order:
-// add_edge(5,3), add_edge(5,1) → adj[5]=[1,3]
-// add_edge(1,4), add_edge(1,2) → adj[1]=[2,4]
-// add_edge(3,4), add_edge(3,2) → adj[3]=[2,4]
-// add_edge(4,6), add_edge(4,2) → adj[4]=[2,6]
-// add_edge(6,2)                → adj[6]=[2]
-const ADJ_LIST = [
+const DEFAULT_ADJ_LIST = [
   [],       // 0: unused
   [2, 4],   // 1
   [],       // 2: no outgoing edges
@@ -22,35 +16,37 @@ const ADJ_LIST = [
   [2],      // 6
 ];
 
-// Adjacency matrix (1-indexed, row=source, col=dest)
-const ADJ_MATRIX = [
+const DEFAULT_ADJ_MATRIX = [
   [0,0,0,0,0,0,0], // row 0: unused
-  [0,0,1,0,1,0,0], // row 1: edges 1→2, 1→4
-  [0,0,0,0,0,0,0], // row 2: no edges
-  [0,0,1,0,1,0,0], // row 3: edges 3→2, 3→4
-  [0,0,1,0,0,0,1], // row 4: edges 4→2, 4→6
-  [0,1,0,1,0,0,0], // row 5: edges 5→1, 5→3
-  [0,0,1,0,0,0,0], // row 6: edge 6→2
+  [0,0,1,0,1,0,0], // row 1
+  [0,0,0,0,0,0,0], // row 2
+  [0,0,1,0,1,0,0], // row 3
+  [0,0,1,0,0,0,1], // row 4
+  [0,1,0,1,0,0,0], // row 5
+  [0,0,1,0,0,0,0], // row 6
 ];
 
-// SVG vertex positions (cx, cy inside a 540×460 viewport)
-const VERTEX_POS = {
-  1: { x: 130, y: 205 },
-  2: { x: 270, y: 400 },
-  3: { x: 410, y: 205 },
-  4: { x: 130, y: 340 },
-  5: { x: 270, y:  60 },
-  6: { x: 410, y: 340 },
+const DEFAULT_VERTEX_POS = {
+  1: { x: 130, y: 205 }, 2: { x: 270, y: 400 },
+  3: { x: 410, y: 205 }, 4: { x: 130, y: 340 },
+  5: { x: 270, y:  60 }, 6: { x: 410, y: 340 },
 };
 
-// All directed edges for SVG rendering
-const EDGES = [
+const DEFAULT_EDGES = [
   { from: 5, to: 1 }, { from: 5, to: 3 },
   { from: 1, to: 2 }, { from: 1, to: 4 },
   { from: 3, to: 2 }, { from: 3, to: 4 },
   { from: 4, to: 2 }, { from: 4, to: 6 },
   { from: 6, to: 2 },
 ];
+
+// Mutable globals — updated when user switches data source
+let NUM_VERTICES = DEFAULT_NUM_VERTICES;
+let SRC_V = DEFAULT_SRC_V, DST_V = DEFAULT_DST_V;
+let ADJ_LIST = DEFAULT_ADJ_LIST.map(a => [...a]);
+let ADJ_MATRIX = DEFAULT_ADJ_MATRIX.map(r => [...r]);
+let EDGES = [...DEFAULT_EDGES];
+let VERTEX_POS = Object.assign({}, DEFAULT_VERTEX_POS);
 
 // ============================================================
 //  APP STATE
@@ -88,10 +84,10 @@ function mkStep(algo, phase, title, desc, fn, vars, hlOverride, stateOverride) {
     }, hlOverride || {}),
     algoState: Object.assign({
       dfsPath:    [],
-      dfsVisited: new Array(7).fill(0),
+      dfsVisited: new Array(NUM_VERTICES + 1).fill(0),
       bfsQueue:   [],
-      bfsDist:    new Array(7).fill(-1),
-      bfsParent:  new Array(7).fill(-1),
+      bfsDist:    new Array(NUM_VERTICES + 1).fill(-1),
+      bfsParent:  new Array(NUM_VERTICES + 1).fill(-1),
       foundPaths: [],
       stepCount:  0,
     }, stateOverride || {}),
@@ -113,7 +109,7 @@ function pathToEdges(verts) {
 // ============================================================
 function generateDfsAllSteps() {
   const steps    = [];
-  const vis      = new Array(7).fill(0);   // visited[1..6], live
+  const vis      = new Array(NUM_VERTICES + 1).fill(0);   // visited[1..N], live
   const pathV    = [];                      // current path vertices, live
   let   found    = [];                      // found paths so far
   let   opCount  = 0;
@@ -124,7 +120,7 @@ function generateDfsAllSteps() {
 
   // Vertices in path (excluding tip) that are "visited but in path"
   function inPathSet() { return new Set(pathV); }
-  function visitedNotInPath() { return [1,2,3,4,5,6].filter(v => vis[v] && !inPathSet().has(v)); }
+  function visitedNotInPath() { return Array.from({length: NUM_VERTICES}, (_, i) => i + 1).filter(v => vis[v] && !inPathSet().has(v)); }
 
   function push(phase, title, desc, fn, vars, hlExtra) {
     const pv = [...pathV];
@@ -234,7 +230,7 @@ function generateDfsAllSteps() {
 function generateDfsLen3Steps() {
   const LIMIT    = 3;
   const steps    = [];
-  const vis      = new Array(7).fill(0);
+  const vis      = new Array(NUM_VERTICES + 1).fill(0);
   const pathV    = [];
   let   found    = [];
   let   opCount  = 0;
@@ -242,7 +238,7 @@ function generateDfsLen3Steps() {
   function snap()  { return { dfsPath: [...pathV], dfsVisited: vis.slice(), foundPaths: found.map(p=>[...p]) }; }
   function visitedNotInPath() {
     const s = new Set(pathV);
-    return [1,2,3,4,5,6].filter(v => vis[v] && !s.has(v));
+    return Array.from({length: NUM_VERTICES}, (_, i) => i + 1).filter(v => vis[v] && !s.has(v));
   }
 
   function push(phase, title, desc, fn, vars, hlExtra) {
@@ -364,8 +360,8 @@ function generateDfsLen3Steps() {
 function generateBfsListSteps() {
   const steps    = [];
   const INF      = 0x3f3f3f3f;
-  const dist     = new Array(7).fill(INF);   // dist[1..6]
-  const parent   = new Array(7).fill(-1);    // parent[1..6]
+  const dist     = new Array(NUM_VERTICES + 1).fill(INF);   // dist[1..N]
+  const parent   = new Array(NUM_VERTICES + 1).fill(-1);    // parent[1..N]
   let   queue    = [];                        // BFS queue (vertex values)
   let   opCount  = 0;
 
@@ -375,7 +371,7 @@ function generateBfsListSteps() {
       bfsDist:   dist.slice(),
       bfsParent: parent.slice(),
       dfsPath:   [],
-      dfsVisited:new Array(7).fill(0),
+      dfsVisited:new Array(NUM_VERTICES + 1).fill(0),
       foundPaths:[],
       stepCount: opCount,
     };
@@ -482,8 +478,8 @@ function generateBfsListSteps() {
 function generateBfsMatrixSteps() {
   const steps    = [];
   const INF      = 0x3f3f3f3f;
-  const dist     = new Array(7).fill(INF);
-  const parent   = new Array(7).fill(-1);
+  const dist     = new Array(NUM_VERTICES + 1).fill(INF);
+  const parent   = new Array(NUM_VERTICES + 1).fill(-1);
   let   queue    = [];
   let   opCount  = 0;
 
@@ -493,7 +489,7 @@ function generateBfsMatrixSteps() {
       bfsDist:   dist.slice(),
       bfsParent: parent.slice(),
       dfsPath:   [],
-      dfsVisited:new Array(7).fill(0),
+      dfsVisited:new Array(NUM_VERTICES + 1).fill(0),
       foundPaths:[],
       stepCount: opCount,
     };
@@ -606,6 +602,9 @@ function initApp() {
   });
 
   setupEventListeners();
+  setupDataSourceHandlers();
+  setupFileIOHandlers();
+  updateHeaderInfo();
   renderStep(currentStep());
   updateHeaderBadge();
 }
@@ -1092,8 +1091,8 @@ function renderDfsState(el, st, hl, algo) {
 function renderBfsState(el, st, hl, algo) {
   const INF    = 0x3f3f3f3f;
   const queue  = st.bfsQueue  || [];
-  const dist   = st.bfsDist   || new Array(7).fill(INF);
-  const parent = st.bfsParent || new Array(7).fill(-1);
+  const dist   = st.bfsDist   || new Array(NUM_VERTICES + 1).fill(INF);
+  const parent = st.bfsParent || new Array(NUM_VERTICES + 1).fill(-1);
   const mRow   = hl.matrixRow;
 
   // Queue display
@@ -1176,6 +1175,258 @@ function escHtml(str) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
+}
+
+// ============================================================
+//  GRAPH BUILDING HELPERS
+// ============================================================
+function computeVertexPositions(n) {
+  const cx = 270, cy = 230, r = 170;
+  const pos = {};
+  for (let v = 1; v <= n; v++) {
+    const angle = (2 * Math.PI * (v - 1) / n) - Math.PI / 2;
+    pos[v] = {
+      x: Math.round(cx + r * Math.cos(angle)),
+      y: Math.round(cy + r * Math.sin(angle)),
+    };
+  }
+  return pos;
+}
+
+function buildFromEdges(numVerts, edgeList, srcV, dstV) {
+  NUM_VERTICES = numVerts;
+  SRC_V = srcV;
+  DST_V = dstV;
+
+  ADJ_LIST = Array.from({length: numVerts + 1}, () => []);
+  for (const {from, to} of edgeList) {
+    if (from >= 1 && from <= numVerts && to >= 1 && to <= numVerts) {
+      ADJ_LIST[from].push(to);
+    }
+  }
+
+  ADJ_MATRIX = Array.from({length: numVerts + 1}, () => new Array(numVerts + 1).fill(0));
+  for (const {from, to} of edgeList) {
+    if (from >= 1 && from <= numVerts && to >= 1 && to <= numVerts) {
+      ADJ_MATRIX[from][to] = 1;
+    }
+  }
+
+  EDGES = edgeList.filter(e => e.from >= 1 && e.from <= numVerts && e.to >= 1 && e.to <= numVerts);
+  VERTEX_POS = computeVertexPositions(numVerts);
+}
+
+function rebuildApp() {
+  APP.allSteps['dfs-all']    = generateDfsAllSteps();
+  APP.allSteps['dfs-len3']   = generateDfsLen3Steps();
+  APP.allSteps['bfs-list']   = generateBfsListSteps();
+  APP.allSteps['bfs-matrix'] = generateBfsMatrixSteps();
+
+  ['dfs-all','dfs-len3','bfs-list','bfs-matrix'].forEach(algo => {
+    const arr = APP.allSteps[algo];
+    arr.forEach((s, i) => { s.stepIndex = i; s.totalSteps = arr.length; });
+  });
+
+  stopPlayback();
+  APP.currentIndex = 0;
+  updateHeaderInfo();
+  renderStep(currentStep());
+  updateNavButtons();
+}
+
+function updateHeaderInfo() {
+  const sub = document.querySelector('.header-subtitle');
+  if (sub) sub.textContent = `part2/graph_path.c 教学演示 · ${NUM_VERTICES} 顶点，${EDGES.length} 条有向边，从顶点 ${SRC_V} 出发到顶点 ${DST_V}`;
+  const panelTitle = document.getElementById('graph-panel-title');
+  if (panelTitle) panelTitle.textContent = `有向图 G（${NUM_VERTICES} 顶点，${EDGES.length} 条有向边）`;
+}
+
+// ============================================================
+//  DATA SOURCE HANDLERS
+// ============================================================
+function setupDataSourceHandlers() {
+  document.querySelectorAll('input[name="data-source"]').forEach(radio => {
+    radio.addEventListener('change', e => {
+      document.getElementById('manual-input-panel').classList.toggle('hidden', e.target.value !== 'manual');
+      document.getElementById('random-input-panel').classList.toggle('hidden', e.target.value !== 'random');
+      if (e.target.value === 'default') {
+        NUM_VERTICES = DEFAULT_NUM_VERTICES;
+        SRC_V = DEFAULT_SRC_V; DST_V = DEFAULT_DST_V;
+        ADJ_LIST = DEFAULT_ADJ_LIST.map(a => [...a]);
+        ADJ_MATRIX = DEFAULT_ADJ_MATRIX.map(r => [...r]);
+        EDGES = [...DEFAULT_EDGES];
+        VERTEX_POS = Object.assign({}, DEFAULT_VERTEX_POS);
+        rebuildApp();
+      }
+    });
+  });
+
+  document.getElementById('btn-apply-manual').addEventListener('click', () => {
+    const nv = Math.min(15, Math.max(2, parseInt(document.getElementById('manual-num-verts').value) || 6));
+    const sv = Math.min(nv, Math.max(1, parseInt(document.getElementById('manual-src').value) || 1));
+    const dv = Math.min(nv, Math.max(1, parseInt(document.getElementById('manual-dst').value) || 2));
+    const raw = document.getElementById('manual-edges-input').value;
+    const edges = [];
+    raw.split(/\n/).forEach(line => {
+      const parts = line.trim().split(/\s+/).map(Number);
+      if (parts.length >= 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+        edges.push({ from: parts[0], to: parts[1] });
+      }
+    });
+    buildFromEdges(nv, edges, sv, dv);
+    rebuildApp();
+  });
+
+  document.getElementById('btn-generate-random').addEventListener('click', () => {
+    const nv = Math.min(15, Math.max(2, parseInt(document.getElementById('random-num-verts').value) || 6));
+    const edgePct = Math.min(60, Math.max(10, parseInt(document.getElementById('random-edge-pct').value) || 30));
+    const edges = generateRandomGraph(nv, edgePct);
+    const sv = 1;
+    const dv = nv > 1 ? nv : 1;
+    buildFromEdges(nv, edges, sv, dv);
+    rebuildApp();
+  });
+}
+
+function generateRandomGraph(nv, edgePctFull) {
+  const maxEdges = nv * (nv - 1);
+  const targetCount = Math.max(nv - 1, Math.floor(maxEdges * edgePctFull / 100));
+  const allPairs = [];
+  for (let u = 1; u <= nv; u++)
+    for (let v = 1; v <= nv; v++)
+      if (u !== v) allPairs.push({from: u, to: v});
+  for (let i = allPairs.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [allPairs[i], allPairs[j]] = [allPairs[j], allPairs[i]];
+  }
+  return allPairs.slice(0, Math.min(targetCount, allPairs.length));
+}
+
+// ============================================================
+//  FILE I/O HANDLERS
+// ============================================================
+function setupFileIOHandlers() {
+  let parsedQueries = null;
+
+  document.getElementById('file-input-p2').addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const text = ev.target.result;
+      document.getElementById('input-display-p2').value = text;
+      parsedQueries = parseInputFile(text);
+      document.getElementById('btn-apply-file-p2').disabled = !parsedQueries;
+    };
+    reader.readAsText(file);
+  });
+
+  document.getElementById('btn-apply-file-p2').addEventListener('click', () => {
+    if (!parsedQueries) return;
+    const output = runQueryBatch(parsedQueries);
+    document.getElementById('output-display-p2').value = output;
+    document.getElementById('btn-download-output-p2').disabled = false;
+    document._part2OutputText = output;
+  });
+
+  document.getElementById('btn-generate-output-p2').addEventListener('click', () => {
+    const output = generateOutputText();
+    document.getElementById('output-display-p2').value = output;
+    document.getElementById('btn-download-output-p2').disabled = false;
+    document._part2OutputText = output;
+  });
+
+  document.getElementById('btn-download-output-p2').addEventListener('click', () => {
+    const text = document._part2OutputText || '';
+    const blob = new Blob([text], { type: 'text/plain' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'part2-output.txt';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+}
+
+function parseInputFile(text) {
+  const lines = text.trim().split(/\n/).map(l => l.trim()).filter(l => l);
+  if (!lines.length) return null;
+  const n = parseInt(lines[0]);
+  if (!n) return null;
+  const queries = [];
+  for (let i = 1; i <= n && i < lines.length; i++) {
+    const parts = lines[i].split(/\s+/).map(Number);
+    if (parts.length >= 2) queries.push({ src: parts[0], dst: parts[1] });
+  }
+  return queries.length ? queries : null;
+}
+
+function runQueryBatch(queries) {
+  let out = '========================================\n';
+  out += '有向图路径搜索 — 批量查询结果\n';
+  out += `图：${NUM_VERTICES} 顶点，${EDGES.length} 条有向边\n`;
+  out += '========================================\n\n';
+
+  queries.forEach((q, i) => {
+    out += `查询 ${i+1}：顶点 ${q.src} → 顶点 ${q.dst}\n`;
+    const paths = findAllPaths(q.src, q.dst);
+    if (paths.length === 0) {
+      out += `  无路径\n`;
+    } else {
+      paths.forEach((p, j) => {
+        out += `  路径 ${j+1}：${p.join(' → ')}\n`;
+      });
+    }
+    const shortest = bfsShortestPath(q.src, q.dst);
+    out += `  最短路径（BFS）：${shortest ? shortest.join(' → ') : '无'}\n`;
+    out += '\n';
+  });
+  return out;
+}
+
+function findAllPaths(src, dst) {
+  const paths = [];
+  const vis = new Array(NUM_VERTICES + 1).fill(0);
+  const path = [];
+  function dfs(cur) {
+    if (cur === dst) { paths.push([...path, cur]); return; }
+    if (vis[cur]) return;
+    vis[cur] = 1;
+    path.push(cur);
+    const neighbors = ADJ_LIST[cur] || [];
+    for (const v of neighbors) dfs(v);
+    path.pop();
+    vis[cur] = 0;
+  }
+  dfs(src);
+  return paths;
+}
+
+function bfsShortestPath(src, dst) {
+  const dist = new Array(NUM_VERTICES + 1).fill(-1);
+  const parent = new Array(NUM_VERTICES + 1).fill(-1);
+  const queue = [src];
+  dist[src] = 0;
+  while (queue.length) {
+    const cur = queue.shift();
+    if (cur === dst) {
+      const path = [];
+      let v = dst;
+      while (v !== -1) { path.unshift(v); v = parent[v]; }
+      return path;
+    }
+    for (const nb of (ADJ_LIST[cur] || [])) {
+      if (dist[nb] === -1) {
+        dist[nb] = dist[cur] + 1;
+        parent[nb] = cur;
+        queue.push(nb);
+      }
+    }
+  }
+  return null;
+}
+
+function generateOutputText() {
+  return runQueryBatch([{ src: SRC_V, dst: DST_V }]);
 }
 
 // ============================================================

@@ -20,6 +20,56 @@
   </div>
 </header>
 
+<!-- ===== 1b. DATA SOURCE ===== -->
+<section id="data-source">
+  <div class="source-inner">
+    <h3 class="section-title">图数据来源</h3>
+    <div class="source-options">
+      <label class="source-option">
+        <input type="radio" name="data-source" value="default" checked>
+        [1] 默认图（6顶点，9条有向边，5→2）
+      </label>
+      <label class="source-option">
+        <input type="radio" name="data-source" value="manual">
+        [2] 手动输入图（顶点数最多15）
+      </label>
+      <label class="source-option">
+        <input type="radio" name="data-source" value="random">
+        [3] 随机生成有向图（顶点数最多15）
+      </label>
+    </div>
+
+    <div id="manual-input-panel" class="source-panel hidden">
+      <div class="manual-params-row">
+        <label>顶点数（2-15）：<input type="number" id="manual-num-verts" min="2" max="15" value="6"></label>
+        <label>起点顶点：<input type="number" id="manual-src" min="1" max="15" value="5"></label>
+        <label>终点顶点：<input type="number" id="manual-dst" min="1" max="15" value="2"></label>
+      </div>
+      <div class="manual-array-row">
+        <label>有向边列表（每行一条边："from to"）：</label>
+        <textarea id="manual-edges-input" rows="6" placeholder="示例：&#10;5 1&#10;5 3&#10;1 2&#10;1 4&#10;3 2&#10;3 4&#10;4 2&#10;4 6&#10;6 2">5 1
+5 3
+1 2
+1 4
+3 2
+3 4
+4 2
+4 6
+6 2</textarea>
+      </div>
+      <button id="btn-apply-manual" class="ctrl-btn primary" style="margin-top:8px">✓ 应用图数据</button>
+    </div>
+
+    <div id="random-input-panel" class="source-panel hidden">
+      <div class="random-params-row">
+        <label>顶点数（2-15）：<input type="number" id="random-num-verts" min="2" max="15" value="6"></label>
+        <label>边密度（%）：<input type="number" id="random-edge-pct" min="10" max="60" value="30"></label>
+        <button id="btn-generate-random" class="ctrl-btn primary">🎲 生成随机有向图</button>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- ===== 2. CONTROLS ===== -->
 <section id="controls">
   <div class="controls-inner">
@@ -152,6 +202,32 @@
     <p style="font-size:0.8rem;color:#888;margin-top:10px;">
       ※ 本例最短路径为 5→1→2（长度=2）。邻接表 BFS 只遍历实际存在的边，效率更高；邻接矩阵 BFS 每次出队需扫描整行（O(V)），适合密集图。DFS 需回溯全部分支，路径数随深度指数级增长。
     </p>
+  </section>
+
+  <!-- ===== 7. FILE I/O ===== -->
+  <section id="file-io">
+    <h3 class="section-title">文件输入输出</h3>
+    <div class="file-io-inner">
+      <div class="file-io-group">
+        <h4>📂 文件输入（part2-input.txt 格式）</h4>
+        <p class="file-format-hint">格式：第1行为查询数 N，后续 N 行各为 "src dst"（起点 终点）</p>
+        <input type="file" id="file-input-p2" accept=".txt">
+        <div class="file-display">
+          <label>输入文件内容：</label>
+          <textarea id="input-display-p2" rows="6" readonly placeholder="上传文件后此处显示内容…"></textarea>
+        </div>
+        <button id="btn-apply-file-p2" class="ctrl-btn primary" disabled>✓ 批量查询并生成输出</button>
+      </div>
+      <div class="file-io-group">
+        <h4>📄 文件输出（part2-output.txt 格式）</h4>
+        <button id="btn-generate-output-p2" class="ctrl-btn">⚙ 生成当前起止点的输出</button>
+        <button id="btn-download-output-p2" class="ctrl-btn" disabled>⬇ 下载 part2-output.txt</button>
+        <div class="file-display">
+          <label>输出结果（所有路径 + 最短路径）：</label>
+          <textarea id="output-display-p2" rows="8" readonly placeholder="点击"生成输出"后此处显示结果…"></textarea>
+        </div>
+      </div>
+    </div>
   </section>
 
 </main>

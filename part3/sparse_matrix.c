@@ -22,6 +22,7 @@
    ───────────────────────────────────────────── */
 #define MAXTERMS 1000
 #define MAXDIM    50
+#define MAX_TEST_CASES 10
 
 #define INPUT_FILE  "part3-input.txt"
 #define OUTPUT_FILE "part3-output.txt"
@@ -67,7 +68,7 @@ typedef struct {
 
 static void fill_default_matrix(int arr[][MAXDIM], int *rows, int *cols)
 {
-    memset(arr, 0, sizeof(int) * MAXDIM * MAXDIM);
+    memset(arr, 0, sizeof(int[MAXDIM][MAXDIM]));
     for (int i = 0; i < 6; i++)
         for (int j = 0; j < 6; j++)
             arr[i][j] = default_arr[i][j];
@@ -86,14 +87,15 @@ static int random_non_zero_value(void)
 
 static void generate_random_matrix(int arr[][MAXDIM], int rows, int cols, int sparsity_pct)
 {
-    memset(arr, 0, sizeof(int) * MAXDIM * MAXDIM);
+    memset(arr, 0, sizeof(int[MAXDIM][MAXDIM]));
     if (rows <= 0 || cols <= 0) return;
 
     int total = rows * cols;
     int safe_sparsity = sparsity_pct;
     if (safe_sparsity < 0) safe_sparsity = 0;
     if (safe_sparsity > 100) safe_sparsity = 100;
-    int nonzero_count = (total * (100 - safe_sparsity) + 50) / 100; /* rounding */
+    /* 四舍五入（half-up）：与 JS 侧的 floor(x + 0.5) 保持一致 */
+    int nonzero_count = (total * (100 - safe_sparsity) + 50) / 100;
     if (nonzero_count <= 0) return;
     if (nonzero_count > total) nonzero_count = total;
 
@@ -659,8 +661,8 @@ static void file_mode(void)
 static void test_mode(void)
 {
     int num_cases = get_predefined_case_count();
-    MatrixCase cases[10];
-    if (num_cases > 10) num_cases = 10;
+    MatrixCase cases[MAX_TEST_CASES];
+    if (num_cases > MAX_TEST_CASES) num_cases = MAX_TEST_CASES;
     for (int i = 0; i < num_cases; i++) {
         if (!load_predefined_case(i, &cases[i])) {
             num_cases = i;

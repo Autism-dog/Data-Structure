@@ -1047,7 +1047,9 @@ function generateRandomMatrix(rows, cols, sparsityPct) {
   const matrix = Array.from({length: rows}, () => Array(cols).fill(0));
   const total = rows * cols;
   const safeSparsity = Math.min(100, Math.max(0, sparsityPct));
-  const count = Math.round(total * (100 - safeSparsity) / 100);
+  // 与 C 端一致的 half-up 取整：count = floor(x + 0.5)
+  // sparsity=100% => 0，sparsity=0% => total
+  const count = Math.floor(total * (100 - safeSparsity) / 100 + 0.5);
   if (count <= 0) return matrix;
   const positions = [];
   for (let r = 0; r < rows; r++)

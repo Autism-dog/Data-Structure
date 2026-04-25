@@ -988,7 +988,7 @@ function setupDataSourceHandlers() {
   document.getElementById('btn-generate-random').addEventListener('click', () => {
     const r = clampDim(document.getElementById('random-rows').value, 6);
     const c = clampDim(document.getElementById('random-cols').value, 6);
-    const sparsity = Math.min(100, Math.max(0, parseInt(document.getElementById('random-density').value) || 60));
+    const sparsity = Math.min(100, Math.max(0, parseInt(document.getElementById('random-sparsity').value) || 60));
     const matrix = generateRandomMatrix(r, c, sparsity);
     rebuildApp(matrix);
     // Also select "random" radio visually
@@ -1044,27 +1044,60 @@ function readInputGrid() {
 }
 
 function generateRandomMatrix(rows, cols, sparsityPct) {
-  const matrix = Array.from({length: rows}, () => Array(cols).fill(0));
   const total = rows * cols;
-  const safeSparsity = Math.min(100, Math.max(0, sparsityPct));
-  // 与 C 端一致的 half-up 取整：count = floor(x + 0.5)
-  // sparsity=100% => 0，sparsity=0% => total
-  const count = Math.floor(total * (100 - safeSparsity) / 100 + 0.5);
-  if (count <= 0) return matrix;
+  const safeSparsity = Math.min(100, Math.max(0, sparsityPct)); // 限制在 0-100 之间
+  
+  // 核心逻辑：计算零元素和非零元素数量
+  const zeroCount = Math.round(total * safeSparsity / 100); // 零元素数 = 总元素 × 稀疏度
+  const nonZeroCount = total - zeroCount; // 非零元素数 = 总元素 - 零元素数
+
+  // 1. 初始化全非零矩阵（稀疏度 0% 的基准）
+  const matrix = Array.from({ length: rows }, () => Array(cols).fill(0));
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      // 生成 -9 至 9 的随机非零数
+      let v = Math.floor(Math.random() * 19) - 9;
+      if (v === 0) v = 1;
+      matrix[r][c] = v;
+    }
+  }
+
+  // 2. 处理边界情况
+  if (safeSparsity === 100) {
+    // 稀疏度 100%：全置为 0
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        matrix[r][c] = 0;
+      }
+    }
+    return matrix;
+  }
+
+  if (safeSparsity === 0) {
+    // 稀疏度 0%：直接返回全非零矩阵
+    return matrix;
+  }
+
+  // 3. 普通情况：随机选择 zeroCount 个位置置为 0
   const positions = [];
-  for (let r = 0; r < rows; r++)
-    for (let c = 0; c < cols; c++)
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
       positions.push([r, c]);
-  // Fisher-Yates shuffle
+    }
+  }
+
+  // Fisher-Yates 洗牌算法打乱位置
   for (let i = positions.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [positions[i], positions[j]] = [positions[j], positions[i]];
   }
-  positions.slice(0, count).forEach(([r, c]) => {
-    let v = Math.floor(Math.random() * 19) - 9;
-    if (v === 0) v = 1; // ensure non-zero
-    matrix[r][c] = v;
-  });
+
+  // 前 zeroCount 个位置置为 0
+  for (let k = 0; k < zeroCount; k++) {
+    const [r, c] = positions[k];
+    matrix[r][c] = 0;
+  }
+
   return matrix;
 }
 

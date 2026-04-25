@@ -629,3 +629,119 @@ body {
   margin-right: 8px;
   margin-bottom: 8px;
 }
+/* 测试案例板块样式 */
+#test-cases {
+  margin-top: 35px;
+  padding-top: 20px;
+  border-top: 2px solid #eee;
+}
+
+.test-intro {
+  margin-bottom: 25px;
+  padding: 15px;
+  background-color: #f0f7ff;
+  border-radius: 6px;
+}
+
+.test-intro h4 {
+  margin: 0 0 10px 0;
+  color: #2980b9;
+}
+
+.method-list {
+  font-size: 0.95rem;
+  color: #555;
+  margin-left: 20px;
+}
+
+.method-list li {
+  margin-bottom: 8px;
+}
+
+.test-case-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 22px;
+}
+
+.test-case-card {
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.06);
+  transition: transform 0.2s;
+}
+
+.test-case-card:hover {
+  transform: translateY(-2px);
+}
+
+.case-header {
+  padding: 12px 18px;
+  color: white;
+  font-weight: 600;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.case-header.success { background-color: #27ae60; }
+.case-header.fail { background-color: #e74c3c; }
+.case-header.boundary { background-color: #f39c12; }
+
+.case-id {
+  font-family: 'Courier New', Courier, monospace;
+  background: rgba(255,255,255,0.25);
+  padding: 3px 10px;
+  border-radius: 5px;
+  font-size: 0.9rem;
+}
+
+.case-type {
+  font-size: 0.95rem;
+}
+
+.case-body {
+  padding: 18px;
+  background-color: #fff;
+}
+
+.case-body p {
+  margin: 10px 0;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.case-note {
+  font-size: 0.85rem;
+  color: #7f8c8d;
+  margin-top: 15px;
+  padding-top: 12px;
+  border-top: 1px dashed #ddd;
+}
+
+/* 稀疏度说明样式 */
+.sparsity-explanation {
+  margin-top: 15px;
+  padding: 15px;
+  background-color: #fff8e1;
+  border-left: 4px solid #ffa000;
+  border-radius: 0 6px 6px 0;
+}
+
+.sparsity-explanation h4 {
+  margin: 0 0 10px 0;
+  color: #e65100;
+  font-size: 1rem;
+}
+
+.sparsity-list {
+  font-size: 0.95rem;
+  color: #555;
+  margin-left: 20px;
+}
+
+.sparsity-list li {
+  margin-bottom: 8px;
+  line-height: 1.5;
+}

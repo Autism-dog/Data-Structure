@@ -1045,40 +1045,43 @@ function readInputGrid() {
 
 function generateRandomMatrix(rows, cols, sparsityPct) {
   const total = rows * cols;
-  const safeSparsity = Math.min(100, Math.max(0, sparsityPct)); // 限制在 0-100 之间
+  const safeSparsity = Math.min(100, Math.max(0, sparsityPct));
   
-  // 核心逻辑：计算零元素和非零元素数量
-  const zeroCount = Math.round(total * safeSparsity / 100); // 零元素数 = 总元素 × 稀疏度
-  const nonZeroCount = total - zeroCount; // 非零元素数 = 总元素 - 零元素数
-
-  // 1. 初始化全非零矩阵（稀疏度 0% 的基准）
-  const matrix = Array.from({ length: rows }, () => Array(cols).fill(0));
-  for (let r = 0; r < rows; r++) {
-    for (let c = 0; c < cols; c++) {
-      // 生成 -9 至 9 的随机非零数
-      let v = Math.floor(Math.random() * 19) - 9;
-      if (v === 0) v = 1;
-      matrix[r][c] = v;
-    }
-  }
-
-  // 2. 处理边界情况
-  if (safeSparsity === 100) {
-    // 稀疏度 100%：全置为 0
+  // ============================================================
+  // 边界条件 1：稀疏度 = 0% → 全非零（1-99），绝对不出现 0
+  // ============================================================
+  if (safeSparsity === 0) {
+    const matrix = Array.from({ length: rows }, () => Array(cols).fill(0));
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
-        matrix[r][c] = 0;
+        // 生成 1 到 99 的随机整数
+        matrix[r][c] = Math.floor(Math.random() * 99) + 1;
       }
     }
     return matrix;
   }
 
-  if (safeSparsity === 0) {
-    // 稀疏度 0%：直接返回全非零矩阵
-    return matrix;
+  // ============================================================
+  // 边界条件 2：稀疏度 = 100% → 全零
+  // ============================================================
+  if (safeSparsity === 100) {
+    return Array.from({ length: rows }, () => Array(cols).fill(0));
   }
 
-  // 3. 普通情况：随机选择 zeroCount 个位置置为 0
+  // ============================================================
+  // 普通情况：0% < 稀疏度 < 100%
+  // ============================================================
+  const zeroCount = Math.round(total * safeSparsity / 100);
+  
+  // 步骤 A：先生成全非零矩阵
+  const matrix = Array.from({ length: rows }, () => Array(cols).fill(0));
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      matrix[r][c] = Math.floor(Math.random() * 99) + 1;
+    }
+  }
+
+  // 步骤 B：随机选择 zeroCount 个位置置为 0
   const positions = [];
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
@@ -1086,13 +1089,13 @@ function generateRandomMatrix(rows, cols, sparsityPct) {
     }
   }
 
-  // Fisher-Yates 洗牌算法打乱位置
+  // Fisher-Yates 洗牌
   for (let i = positions.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [positions[i], positions[j]] = [positions[j], positions[i]];
   }
 
-  // 前 zeroCount 个位置置为 0
+  // 置零
   for (let k = 0; k < zeroCount; k++) {
     const [r, c] = positions[k];
     matrix[r][c] = 0;
@@ -1100,7 +1103,6 @@ function generateRandomMatrix(rows, cols, sparsityPct) {
 
   return matrix;
 }
-
 // ============================================================
 //  FILE I/O HANDLERS
 // ============================================================

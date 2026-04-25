@@ -85,6 +85,92 @@
   </div>
 </section>
 
+<!-- ===== 8. TEST CASES LIBRARY ===== -->
+<section id="test-cases">
+  <h3 class="section-title">测试案例库（等价类划分 & 边界值分析）</h3>
+  
+  <div class="test-intro">
+    <h4>测试设计方法说明</h4>
+    <ul class="method-list">
+      <li><strong>等价类划分</strong>：
+        <br>- 有效等价类：查找成功（块首/块中/块尾元素）
+        <br>- 无效等价类：查找失败（小于最小值/大于最大值/介于两块之间）
+      </li>
+      <li><strong>边界值分析</strong>：
+        <br>- 数组边界：最小元素、最大元素
+        <br>- 索引表边界：索引表中记录的块最大值
+        <br>- 块内边界：块的第一个元素、最后一个元素
+      </li>
+    </ul>
+  </div>
+
+  <div class="test-case-grid">
+    <!-- 测试案例 1：等价类 - 查找成功（块尾） -->
+    <div class="test-case-card">
+      <div class="case-header success">
+        <span class="case-id">TC-001</span>
+        <span class="case-type">等价类：查找成功（块尾）</span>
+      </div>
+      <div class="case-body">
+        <p><strong>输入键</strong>：<code>10</code></p>
+        <p><strong>预期结果</strong>：查找成功，位于第1块末尾</p>
+        <p><strong>查找次数</strong>：索引1次 + 块内5次 = <strong>6次</strong></p>
+        <p class="case-note">覆盖：有效等价类“键值存在且位于块的末尾位置”</p>
+      </div>
+    </div>
+
+    <!-- 测试案例 2：边界值 - 最小/最大元素 -->
+    <div class="test-case-card">
+      <div class="case-header boundary">
+        <span class="case-id">TC-002</span>
+        <span class="case-type">边界值：数组极值</span>
+      </div>
+      <div class="case-body">
+        <p><strong>输入键</strong>：<code>6</code>（最小） / <code>100</code>（最大）</p>
+        <p><strong>预期结果</strong>：均查找成功</p>
+        <p><strong>查找次数</strong>：
+          <br>- 键6：索引1次 + 块内3次 = <strong>4次</strong>
+          <br>- 键100：索引5次 + 块内1次 = <strong>6次</strong>
+        </p>
+        <p class="case-note">覆盖：边界值“数组最小值、数组最大值”</p>
+      </div>
+    </div>
+
+    <!-- 测试案例 3：等价类 - 查找失败（中间间隙） -->
+    <div class="test-case-card">
+      <div class="case-header fail">
+        <span class="case-id">TC-003</span>
+        <span class="case-type">等价类：查找失败（间隙）</span>
+      </div>
+      <div class="case-body">
+        <p><strong>输入键</strong>：<code>35</code></p>
+        <p><strong>预期结果</strong>：查找失败（介于第2块最大值34和第3块最大值66之间）</p>
+        <p><strong>查找次数</strong>：索引3次 + 块内5次 = <strong>8次</strong></p>
+        <p class="case-note">覆盖：无效等价类“键值在两块之间但不存在于数组中”</p>
+      </div>
+    </div>
+
+    <!-- 测试案例 4：边界值 - 索引表边界 -->
+    <div class="test-case-card">
+      <div class="case-header boundary">
+        <span class="case-id">TC-004</span>
+        <span class="case-type">边界值：索引表键值</span>
+      </div>
+      <div class="case-body">
+        <p><strong>输入键</strong>：<code>14</code>（索引表第1项） / <code>66</code>（索引表第3项）</p>
+        <p><strong>预期结果</strong>：均查找成功</p>
+        <p><strong>查找次数</strong>：
+          <br>- 键14：索引1次 + 块内2次 = <strong>3次</strong>
+          <br>- 键66：索引3次 + 块内4次 = <strong>7次</strong>
+        </p>
+        <p class="case-note">覆盖：边界值“索引表中记录的块最大值”</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
 <!-- ===== MAIN CONTENT ===== -->
 <main id="main-content">
 
@@ -131,50 +217,84 @@
   </section>
 
   <!-- ===== 6. COMPLEXITY TABLE ===== -->
-  <section id="complexity">
-    <h3 class="section-title">三种分块查找算法复杂度对比</h3>
-    <table class="complexity-table">
-      <thead>
-        <tr>
-          <th>算法</th>
-          <th>索引查找复杂度</th>
-          <th>块内查找复杂度</th>
-          <th>总时间复杂度</th>
-          <th>空间复杂度</th>
-          <th>本例估算（n=25，b=5，s=5）</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td><strong>顺序索引分块查找</strong><br><small>block_search_sequential_index</small></td>
-          <td><code>O(b)</code></td>
-          <td><code>O(s)</code></td>
-          <td><code>O(b + s)</code></td>
-          <td><code>O(b)</code>（索引表）</td>
-          <td>最多 b+s = 5+5 = <strong>10</strong> 次比较</td>
-        </tr>
-        <tr>
-          <td><strong>折半索引分块查找</strong><br><small>block_search_binary_index</small></td>
-          <td><code>O(log b)</code></td>
-          <td><code>O(s)</code></td>
-          <td><code>O(log b + s)</code></td>
-          <td><code>O(b)</code>（索引表）</td>
-          <td>最多 ⌈log₂5⌉+5 = 3+5 = <strong>8</strong> 次比较</td>
-        </tr>
-        <tr>
-          <td><strong>链式分块查找</strong><br><small>linked_block_search</small></td>
-          <td><code>O(b)</code></td>
-          <td><code>O(s)</code></td>
-          <td><code>O(b + s)</code></td>
-          <td><code>O(n)</code>（链表指针）</td>
-          <td>最多 b+s = 5+5 = <strong>10</strong> 次比较，但需要额外 n 个链表结点</td>
-        </tr>
-      </tbody>
-    </table>
-    <p style="font-size:0.8rem;color:#888;margin-top:10px;">
-      ※ b = 块数 = √n 时平均查找性能最优。本例 b=5，s=5，总顺序查找平均次数 ≈ (b+1)/2 + (s+1)/2 = 3 + 3 = 6 次。折半索引进一步将索引查找降为 O(log b)。链式存储允许块内元素动态插删，但空间开销更大。
-    </p>
-  </section>
+  <!-- ===== 6. COMPLEXITY & ASL ===== -->
+<section id="complexity">
+  <h3 class="section-title">三种分块查找算法复杂度对比</h3>
+  <table class="complexity-table">
+    <thead>
+      <tr>
+        <th>算法</th>
+        <th>索引查找复杂度</th>
+        <th>块内查找复杂度</th>
+        <th>总时间复杂度</th>
+        <th>空间复杂度</th>
+        <th>本例估算（n=25，b=5，s=5）</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>顺序索引分块查找</strong><br><small>block_search_sequential_index</small></td>
+        <td><code>O(b)</code></td>
+        <td><code>O(s)</code></td>
+        <td><code>O(b + s)</code></td>
+        <td><code>O(b)</code>（索引表）</td>
+        <td>最多 b+s = 5+5 = <strong>10</strong> 次比较</td>
+      </tr>
+      <tr>
+        <td><strong>折半索引分块查找</strong><br><small>block_search_binary_index</small></td>
+        <td><code>O(log b)</code></td>
+        <td><code>O(s)</code></td>
+        <td><code>O(log b + s)</code></td>
+        <td><code>O(b)</code>（索引表）</td>
+        <td>最多 ⌈log₂5⌉+5 = 3+5 = <strong>8</strong> 次比较</td>
+      </tr>
+      <tr>
+        <td><strong>链式分块查找</strong><br><small>linked_block_search</small></td>
+        <td><code>O(b)</code></td>
+        <td><code>O(s)</code></td>
+        <td><code>O(b + s)</code></td>
+        <td><code>O(n)</code>（链表指针）</td>
+        <td>最多 b+s = 5+5 = <strong>10</strong> 次比较，但需要额外 n 个链表结点</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- 新增：ASL 详细计算板块 -->
+  <div class="asl-calculation">
+    <h4>平均查找长度（ASL）计算（等概率假设）</h4>
+    <p class="asl-note">参数说明：<code>b</code> = 块数（本例 5），<code>s</code> = 每块元素数（本例 5），<code>n</code> = 总元素数（本例 25）</p>
+
+    <div class="asl-section">
+      <h5>1. 顺序索引分块查找（默认演示算法）</h5>
+      <div class="asl-formula-block">
+        <p><strong>ASL<sub>成功</sub></strong> = 索引查找平均次数 + 块内查找平均次数</p>
+        <p class="formula">ASL<sub>成功</sub> = (b+1)/2 + (s+1)/2</p>
+        <p class="formula-result">代入数值：(5+1)/2 + (5+1)/2 = 3 + 3 = <strong>6</strong></p>
+      </div>
+      <div class="asl-formula-block">
+        <p><strong>ASL<sub>不成功</sub></strong> = 索引查找平均次数 + 块内全遍历次数</p>
+        <p class="formula">ASL<sub>不成功</sub> = (b+1)/2 + s</p>
+        <p class="formula-result">代入数值：(5+1)/2 + 5 = 3 + 5 = <strong>8</strong></p>
+      </div>
+    </div>
+
+    <div class="asl-section">
+      <h5>2. 折半索引分块查找（扩展算法）</h5>
+      <div class="asl-formula-block">
+        <p><strong>ASL<sub>成功</sub></strong> = ⌈log<sub>2</sub>(b+1)⌉ + (s+1)/2</p>
+        <p class="formula-result">代入数值：⌈log<sub>2</sub>6⌉ + (5+1)/2 = 3 + 3 = <strong>6</strong></p>
+      </div>
+      <div class="asl-formula-block">
+        <p><strong>ASL<sub>不成功</sub></strong> ≈ log<sub>2</sub>(b+1) + s</p>
+        <p class="formula-result">代入数值：≈ 3 + 5 = <strong>8</strong></p>
+      </div>
+    </div>
+  </div>
+
+  <p style="font-size:0.8rem;color:#888;margin-top:10px;">
+    ※ b = 块数 = √n 时平均查找性能最优。本例 b=5，s=5，总顺序查找平均次数 ≈ (b+1)/2 + (s+1)/2 = 3 + 3 = 6 次。折半索引进一步将索引查找降为 O(log b)。链式存储允许块内元素动态插删，但空间开销更大。
+  </p>
+</section>
 
   <!-- ===== 7. FILE I/O ===== -->
   <section id="file-io">

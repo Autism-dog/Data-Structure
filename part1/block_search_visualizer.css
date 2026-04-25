@@ -860,3 +860,154 @@ body {
   margin-right: 8px;
   margin-bottom: 8px;
 }
+/* ASL 计算板块样式 */
+.asl-calculation {
+  margin-top: 25px;
+  padding: 18px;
+  background-color: #f8f9fa;
+  border-left: 4px solid #4a90e2;
+  border-radius: 0 6px 6px 0;
+}
+
+.asl-calculation h4 {
+  margin: 0 0 12px 0;
+  color: #2c3e50;
+  font-size: 1.1rem;
+}
+
+.asl-note {
+  font-size: 0.9rem;
+  color: #666;
+  margin-bottom: 15px;
+}
+
+.asl-section {
+  margin-bottom: 20px;
+}
+
+.asl-section:last-child {
+  margin-bottom: 0;
+}
+
+.asl-section h5 {
+  margin: 0 0 10px 0;
+  color: #34495e;
+  font-size: 1rem;
+}
+
+.asl-formula-block {
+  margin-left: 15px;
+  margin-bottom: 12px;
+}
+
+.asl-formula-block p {
+  margin: 6px 0;
+  font-size: 0.95rem;
+}
+
+.formula {
+  font-family: 'Courier New', Courier, monospace;
+  background-color: #e9ecef;
+  padding: 6px 12px;
+  border-radius: 4px;
+  display: inline-block;
+  color: #2d3436;
+  margin: 8px 0;
+}
+
+.formula-result {
+  font-weight: 600;
+  color: #27ae60;
+  font-size: 1rem !important;
+}
+
+/* 测试案例板块样式 */
+#test-cases {
+  margin-top: 35px;
+  padding-top: 20px;
+  border-top: 2px solid #eee;
+}
+
+.test-intro {
+  margin-bottom: 25px;
+  padding: 15px;
+  background-color: #f0f7ff;
+  border-radius: 6px;
+}
+
+.test-intro h4 {
+  margin: 0 0 10px 0;
+  color: #2980b9;
+}
+
+.method-list {
+  font-size: 0.95rem;
+  color: #555;
+  margin-left: 20px;
+}
+
+.method-list li {
+  margin-bottom: 8px;
+}
+
+.test-case-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 22px;
+}
+
+.test-case-card {
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.06);
+  transition: transform 0.2s;
+}
+
+.test-case-card:hover {
+  transform: translateY(-2px);
+}
+
+.case-header {
+  padding: 12px 18px;
+  color: white;
+  font-weight: 600;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.case-header.success { background-color: #27ae60; }
+.case-header.fail { background-color: #e74c3c; }
+.case-header.boundary { background-color: #f39c12; }
+
+.case-id {
+  font-family: 'Courier New', Courier, monospace;
+  background: rgba(255,255,255,0.25);
+  padding: 3px 10px;
+  border-radius: 5px;
+  font-size: 0.9rem;
+}
+
+.case-type {
+  font-size: 0.95rem;
+}
+
+.case-body {
+  padding: 18px;
+  background-color: #fff;
+}
+
+.case-body p {
+  margin: 10px 0;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.case-note {
+  font-size: 0.85rem;
+  color: #7f8c8d;
+  margin-top: 15px;
+  padding-top: 12px;
+  border-top: 1px dashed #ddd;
+}
